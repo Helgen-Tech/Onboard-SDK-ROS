@@ -103,6 +103,8 @@ namespace dji_osdk_ros
       bool monitoredLanding(ACK::ErrorCode& ack, int timeout);
       bool moveByPositionOffset(ACK::ErrorCode& ack, int timeout, MoveOffset& p_offset);
 
+      bool moveVelocity(std::vector<float> _velocity);
+
       /*! Parts of mfio */
       uint8_t outputMFIO(uint8_t mode, uint8_t channel, uint32_t init_on_time_us, uint16_t freq, bool block, uint8_t gpio_value);
       uint32_t inputMFIO(uint8_t mode, uint8_t channel, bool block);
@@ -129,7 +131,7 @@ namespace dji_osdk_ros
       bool RegisterMissionStateCallback(void *userData, PushCallback cb);
 
       /*! Parts of advanced_sendsing */
-#ifdef ADVANCED_SENSING
+      #ifdef ADVANCED_SENSING
       /*! CameraStream */
       bool startFPVCameraStream(CameraImageCallback cb = NULL, void * cbParam = NULL);
       bool startMainCameraStream(CameraImageCallback cb = NULL, void * cbParam = NULL);
@@ -172,7 +174,7 @@ namespace dji_osdk_ros
         * @brief unsubscribe to VGA (480x640) stereo images
         */
       void unsubscribeVGAImages();
-#endif
+      #endif
       bool isM100();
       bool isM200V2();
       bool isM300();
@@ -215,7 +217,7 @@ namespace dji_osdk_ros
                                              UserData userData);
       Version::FirmWare getFwVersion() const;
       char* getHwVersion() const;
-  protected:
+    protected:
       bool startGlobalPositionBroadcast();
       Telemetry::Vector3f toEulerAngle(void* quaternionData);
       void localOffsetFromGpsOffset(Telemetry::Vector3f& deltaNed, void* target, void* origin);
@@ -235,7 +237,7 @@ namespace dji_osdk_ros
       {
         return linker;
       }
-    
+
     private:
       uint32_t timeout_;
       Vehicle::ActivateData activate_data_;

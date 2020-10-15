@@ -1664,6 +1664,13 @@ static T_OsdkOsalHandler osalHandler = {
     return ACK::SUCCESS;
   }
 
+  bool VehicleWrapper::moveVelocity(std::vector<float> _velocity){
+
+    vehicle->control->velocityAndYawRateCtrl(_velocity[0], _velocity[1], _velocity[2], _velocity[3]);
+
+    return true;
+  }
+
   bool VehicleWrapper::startGlobalPositionBroadcast()
   {
     uint8_t freq[16];

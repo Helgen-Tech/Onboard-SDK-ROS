@@ -470,6 +470,9 @@ bool VehicleNode::initTopic()
     ptr_wrapper_->subscribeFCTimeInUTCRef(&VehicleNode::FCTimeInUTCCallback, this);
     ptr_wrapper_->subscribePPSSource(&VehicleNode::PPSSourceCallback, this);
   }
+
+  initControlTopics();
+
   return true;
 }
 
@@ -684,6 +687,22 @@ bool VehicleNode::cleanUpSubscribeFromFC()
   return true;
 }
 
+bool VehicleNode::initControlTopics(){
+
+  // TODO: DO BETTER THIS INITIALIZATION OF VELOCITY VECTOR
+  targetVelocity_.push_back(0);
+  targetVelocity_.push_back(0);
+  targetVelocity_.push_back(0);
+  targetVelocity_.push_back(0);
+
+  velocitySubscriber_ = nh_.subscribe("/dji_control/velocity", 1, &VehicleNode::velocityCallback, this);
+
+  controlThread_ = std::thread(&VehicleNode::ctrlThread, this);
+
+  state_ = eStateControl::WAIT;
+    
+  return true;
+}
 
 #ifdef ADVANCED_SENSING
 bool VehicleNode::setupCameraStreamCallback(dji_osdk_ros::SetupCameraStream::Request& request,
@@ -1440,6 +1459,77 @@ bool VehicleNode::setUpwardsAvoidCallback(AvoidEnable::Request& request, AvoidEn
   else
   {
     response.result = false;
+  }
+
+  return true;
+}
+
+void VehicleNode::velocityCallback(const geometry_msgs::TwistStamped::ConstPtr& _msg){
+
+  lock_.lock();
+  targetVelocity_[0] = _msg->twist.linear.x;
+  targetVelocity_[1] = _msg->twist.linear.y;
+  targetVelocity_[2] = _msg->twist.linear.z;
+  targetVelocity_[3] = _msg->twist.angular.x;
+  lock_.unlock();
+
+  if( (targetVelocity_[0] == 0.0) && (targetVelocity_[1] == 0.0) && (targetVelocity_[2] == 0.0) && (targetVelocity_[3] == 0.0) ){
+    state_ = eStateControl::BRAKE;
+  }else{
+    state_ = eStateControl::MOVE_VEL;
+  }
+
+  lastTime_ = std::chrono::high_resolution_clock::now();
+}
+
+bool VehicleNode::ctrlThread(){
+
+  std::cout << "Start Control Thread" << std::endl;
+
+  ros::Rate rate(50);
+
+  ACK::ErrorCode ack;
+
+  lastTime_ = std::chrono::high_resolution_clock::now();
+
+  while (fin_ == false && ros::ok()) {     
+    switch(state_){
+      case eStateControl::WAIT:
+      {   
+        // TODO: DO ANYTHING
+        break;
+      }
+      case eStateControl::BRAKE:
+      {   
+        lock_.lock();
+        targetVelocity_[0] = 0.0;
+        targetVelocity_[1] = 0.0;
+        targetVelocity_[2] = 0.0;
+        targetVelocity_[3] = 0.0;
+        ptr_wrapper_->moveVelocity(targetVelocity_);
+        lock_.unlock();
+        state_ = eStateControl::WAIT;
+        break;
+      }
+      case eStateControl::MOVE_VEL:
+      {   
+        lock_.lock();
+        ptr_wrapper_->moveVelocity(targetVelocity_);
+        lock_.unlock();
+        break;
+      }
+      case eStateControl::EXIT:
+        std::cout << "\nEXIT..." << std::endl;
+        fin_ = true;
+        break;
+      }
+
+    auto tActual = std::chrono::high_resolution_clock::now();
+    if(std::chrono::duration_cast<std::chrono::milliseconds>(tActual - lastTime_).count() > 500){
+      state_ = eStateControl::BRAKE;
+    }
+
+    rate.sleep();
   }
 
   return true;
