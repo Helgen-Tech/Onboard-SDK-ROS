@@ -87,6 +87,10 @@ VehicleNode::VehicleNode():telemetry_from_fc_(TelemetryType::USE_ROS_BROADCAST),
 
 VehicleNode::~VehicleNode()
 {
+
+  state_ = eStateControl::EXIT;
+  controlThread_.join();
+
   if(!ptr_wrapper_->isM100() && telemetry_from_fc_ == TelemetryType::USE_ROS_SUBSCRIBE)
   {
     cleanUpSubscribeFromFC();
