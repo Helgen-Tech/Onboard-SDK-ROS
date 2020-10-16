@@ -689,11 +689,11 @@ bool VehicleNode::cleanUpSubscribeFromFC()
 
 bool VehicleNode::initControlTopics(){
 
-  // TODO: DO BETTER THIS INITIALIZATION OF VELOCITY VECTOR
-  targetVelocity_.push_back(0);
-  targetVelocity_.push_back(0);
-  targetVelocity_.push_back(0);
-  targetVelocity_.push_back(0);
+  targetVelocity_.resize(4); 
+  targetVelocity_[0] = 0.0;
+  targetVelocity_[1] = 0.0;
+  targetVelocity_[2] = 0.0;
+  targetVelocity_[3] = 0.0;
 
   velocitySubscriber_ = nh_.subscribe("/dji_control/velocity", 1, &VehicleNode::velocityCallback, this);
 
@@ -1513,6 +1513,7 @@ bool VehicleNode::ctrlThread(){
       }
       case eStateControl::MOVE_VEL:
       {   
+        std::cout << "Moving in Velocity" << std::endl;
         lock_.lock();
         ptr_wrapper_->moveVelocity(targetVelocity_);
         lock_.unlock();
