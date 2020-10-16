@@ -693,6 +693,8 @@ bool VehicleNode::cleanUpSubscribeFromFC()
 
 bool VehicleNode::initControlTopics(){
 
+  crtlAuthService_ = nh_.advertiseService("/dji_control/get_control", &VehicleNode::ctrlAuthService, this);
+
   targetVelocity_.resize(4); 
   targetVelocity_[0] = 0.0;
   targetVelocity_[1] = 0.0;
@@ -1486,6 +1488,17 @@ void VehicleNode::velocityCallback(const geometry_msgs::TwistStamped::ConstPtr& 
   lastTime_ = std::chrono::high_resolution_clock::now();
 }
 
+bool VehicleNode::ctrlAuthService(std_srvs::SetBool::Request &_req, std_srvs::SetBool::Response &_res){
+
+  enableCtrl_ = _req.data;
+
+  state_ = eStateControl::RECOVER_CONTROL;
+
+  _res.success = true;
+
+  return true;
+}
+
 bool VehicleNode::ctrlThread(){
 
   std::cout << "Start Control Thread" << std::endl;
@@ -1521,6 +1534,13 @@ bool VehicleNode::ctrlThread(){
         lock_.lock();
         ptr_wrapper_->moveVelocity(targetVelocity_);
         lock_.unlock();
+        break;
+      }
+      case eStateControl::RECOVER_CONTROL:
+      {
+        std::cout << "Obtain or Release control: " << enableCtrl_ << std::endl;
+        ptr_wrapper_->obtainReleaseCtrl(enableCtrl_, FLIGHT_CONTROL_WAIT_TIMEOUT);
+        state_ = eStateControl::WAIT;
         break;
       }
       case eStateControl::EXIT:

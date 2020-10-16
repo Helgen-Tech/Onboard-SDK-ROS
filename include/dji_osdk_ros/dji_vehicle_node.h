@@ -154,6 +154,7 @@
 #include <dji_osdk_ros/WaypointV2MissionStatePush.h>
 
 #include <geometry_msgs/TwistStamped.h>
+#include <std_srvs/SetBool.h>
 
 #define C_EARTH (double)6378137.0
 #define C_PI (double)3.141592653589793
@@ -312,6 +313,7 @@ namespace dji_osdk_ros
 
     private:
       ros::Subscriber velocitySubscriber_;
+      ros::ServiceServer crtlAuthService_;
 
     protected:
       /*! for general */
@@ -425,6 +427,8 @@ namespace dji_osdk_ros
     private:
       void velocityCallback(const geometry_msgs::TwistStamped::ConstPtr& _msg);
 
+      bool ctrlAuthService(std_srvs::SetBool::Request &_req, std_srvs::SetBool::Response &_res);
+
       bool ctrlThread();
 
     private:
@@ -435,12 +439,15 @@ namespace dji_osdk_ros
           WAIT,
           BRAKE,
           MOVE_VEL,
+          RECOVER_CONTROL,
           EXIT
       }state_;
 
       std::mutex lock_;
       std::thread controlThread_;
       std::vector<float> targetVelocity_;
+
+      bool enableCtrl_;
 
       std::chrono::time_point<std::chrono::high_resolution_clock> lastTime_;
 

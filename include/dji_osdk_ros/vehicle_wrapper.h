@@ -105,6 +105,8 @@ namespace dji_osdk_ros
 
       bool moveVelocity(std::vector<float> _velocity);
 
+      bool obtainReleaseCtrl(bool _enable, int _timeout);
+
       /*! Parts of mfio */
       uint8_t outputMFIO(uint8_t mode, uint8_t channel, uint32_t init_on_time_us, uint16_t freq, bool block, uint8_t gpio_value);
       uint32_t inputMFIO(uint8_t mode, uint8_t channel, bool block);
