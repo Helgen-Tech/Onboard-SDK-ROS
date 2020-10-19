@@ -693,7 +693,7 @@ bool VehicleNode::cleanUpSubscribeFromFC()
 
 bool VehicleNode::initControlTopics(){
 
-  crtlAuthService_ = nh_.advertiseService("/dji_control/get_control", &VehicleNode::ctrlAuthService, this);
+  crtlAuthServ_ = nh_.advertiseService("/dji_control/get_control", &VehicleNode::ctrlAuthService, this);
 
   targetVelocity_.resize(4); 
   targetVelocity_[0] = 0.0;
@@ -1051,6 +1051,7 @@ bool VehicleNode::taskCtrlCallback(FlightTaskControl::Request&  request, FlightT
       }
     case FlightTaskControl::Request::TASK_LAND:
       {
+        state_ = eStateControl::BRAKE;
         ROS_INFO_STREAM("call land service");
         if (ptr_wrapper_->monitoredLanding(ack, FLIGHT_CONTROL_WAIT_TIMEOUT))
         {

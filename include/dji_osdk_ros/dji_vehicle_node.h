@@ -313,7 +313,7 @@ namespace dji_osdk_ros
 
     private:
       ros::Subscriber velocitySubscriber_;
-      ros::ServiceServer crtlAuthService_;
+      ros::ServiceServer crtlAuthServ_;
 
     protected:
       /*! for general */
