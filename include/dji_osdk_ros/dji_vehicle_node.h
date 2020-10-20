@@ -445,7 +445,7 @@ namespace dji_osdk_ros
 
       std::mutex lock_;
       std::thread controlThread_;
-      std::vector<float> targetVelocity_;
+      std::vector<float> targetVelocity_, copyTargetVelocity_;
 
       bool enableCtrl_;
 

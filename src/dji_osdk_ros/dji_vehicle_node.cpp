@@ -701,6 +701,12 @@ bool VehicleNode::initControlTopics(){
   targetVelocity_[2] = 0.0;
   targetVelocity_[3] = 0.0;
 
+  copyTargetVelocity_.resize(4); 
+  copyTargetVelocity_[0] = 0.0;
+  copyTargetVelocity_[1] = 0.0;
+  copyTargetVelocity_[2] = 0.0;
+  copyTargetVelocity_[3] = 0.0;
+
   velocitySubscriber_ = nh_.subscribe("/dji_control/velocity", 1, &VehicleNode::velocityCallback, this);
 
   controlThread_ = std::thread(&VehicleNode::ctrlThread, this);
@@ -1519,13 +1525,11 @@ bool VehicleNode::ctrlThread(){
       }
       case eStateControl::BRAKE:
       {   
-        lock_.lock();
-        targetVelocity_[0] = 0.0;
-        targetVelocity_[1] = 0.0;
-        targetVelocity_[2] = 0.0;
-        targetVelocity_[3] = 0.0;
-        ptr_wrapper_->moveVelocity(targetVelocity_);
-        lock_.unlock();
+        copyTargetVelocity_[0] = 0.0;
+        copyTargetVelocity_[1] = 0.0;
+        copyTargetVelocity_[2] = 0.0;
+        copyTargetVelocity_[3] = 0.0;
+        ptr_wrapper_->moveVelocity(copyTargetVelocity_);
         state_ = eStateControl::WAIT;
         break;
       }
@@ -1533,8 +1537,12 @@ bool VehicleNode::ctrlThread(){
       {   
         std::cout << "Moving in Velocity" << std::endl;
         lock_.lock();
-        ptr_wrapper_->moveVelocity(targetVelocity_);
+        copyTargetVelocity_[0] = targetVelocity_[0];
+        copyTargetVelocity_[1] = targetVelocity_[1];
+        copyTargetVelocity_[2] = targetVelocity_[2];
+        copyTargetVelocity_[3] = targetVelocity_[3];
         lock_.unlock();
+        ptr_wrapper_->moveVelocity(copyTargetVelocity_);
         break;
       }
       case eStateControl::RECOVER_CONTROL:
