@@ -743,8 +743,12 @@ void VehicleNode::gpsConvertENU(double &ENU_x, double &ENU_y,
 {
   double d_lon = gps_t_lon - gps_r_lon;
   double d_lat = gps_t_lat - gps_r_lat;
-  ENU_y = DEG2RAD(d_lat) * C_EARTH;
-  ENU_x = DEG2RAD(d_lon) * C_EARTH * cos(DEG2RAD(gps_t_lat));
+  // ENU_y = DEG2RAD(d_lat) * C_EARTH;
+  // ENU_x = DEG2RAD(d_lon) * C_EARTH * cos(DEG2RAD(gps_t_lat));
+
+  // Change to NED for Velocity Control
+  ENU_x = DEG2RAD(d_lat) * C_EARTH;
+  ENU_y = DEG2RAD(d_lon) * C_EARTH * cos(DEG2RAD(gps_t_lat));
 }
 
 #ifdef ADVANCED_SENSING

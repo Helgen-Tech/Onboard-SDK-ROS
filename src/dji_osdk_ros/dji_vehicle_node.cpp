@@ -1535,7 +1535,7 @@ bool VehicleNode::ctrlThread(){
       }
       case eStateControl::MOVE_VEL:
       {   
-        std::cout << "Moving in Velocity" << std::endl;
+        // std::cout << "Moving in Velocity" << std::endl;
         lock_.lock();
         copyTargetVelocity_[0] = targetVelocity_[0];
         copyTargetVelocity_[1] = targetVelocity_[1];
