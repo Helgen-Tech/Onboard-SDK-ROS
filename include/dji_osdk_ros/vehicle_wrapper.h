@@ -105,6 +105,8 @@ namespace dji_osdk_ros
 
       bool moveVelocity(std::vector<float> _velocity);
 
+      bool moveCustom(std::vector<float> _velocity, bool _stable, bool _localAxis);
+
       bool obtainReleaseCtrl(bool _enable, int _timeout);
 
       /*! Parts of mfio */

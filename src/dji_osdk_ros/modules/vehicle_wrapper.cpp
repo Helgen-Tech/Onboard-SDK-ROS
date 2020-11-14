@@ -1671,6 +1671,44 @@ static T_OsdkOsalHandler osalHandler = {
     return true;
   }
 
+  bool VehicleWrapper::moveCustom(std::vector<float> _velocity, bool _stable, bool _localAxis){
+
+    uint8_t ctrl_flag;
+    
+    if(_stable && _localAxis){
+      ctrl_flag = (DJI::OSDK::Control::VerticalLogic::VERTICAL_VELOCITY | 
+                    DJI::OSDK::Control::HorizontalLogic::HORIZONTAL_VELOCITY | 
+                    DJI::OSDK::Control::YawLogic::YAW_RATE | 
+                    DJI::OSDK::Control::HorizontalCoordinate::HORIZONTAL_BODY) |
+                    DJI::OSDK::Control::StableMode::STABLE_ENABLE;
+
+    }else if(!_stable && _localAxis){
+      ctrl_flag = (DJI::OSDK::Control::VerticalLogic::VERTICAL_VELOCITY | 
+                    DJI::OSDK::Control::HorizontalLogic::HORIZONTAL_VELOCITY | 
+                    DJI::OSDK::Control::YawLogic::YAW_RATE | 
+                    DJI::OSDK::Control::HorizontalCoordinate::HORIZONTAL_BODY);
+
+    }else if(_stable && !_localAxis){
+      ctrl_flag = (DJI::OSDK::Control::VerticalLogic::VERTICAL_VELOCITY | 
+                    DJI::OSDK::Control::HorizontalLogic::HORIZONTAL_VELOCITY | 
+                    DJI::OSDK::Control::YawLogic::YAW_RATE | 
+                    DJI::OSDK::Control::HorizontalCoordinate::HORIZONTAL_GROUND)|
+                    DJI::OSDK::Control::StableMode::STABLE_ENABLE;
+
+    }else if(!_stable && !_localAxis){
+      ctrl_flag = (DJI::OSDK::Control::VerticalLogic::VERTICAL_VELOCITY | 
+                    DJI::OSDK::Control::HorizontalLogic::HORIZONTAL_VELOCITY | 
+                    DJI::OSDK::Control::YawLogic::YAW_RATE | 
+                    DJI::OSDK::Control::HorizontalCoordinate::HORIZONTAL_GROUND);
+    }
+                   
+    DJI::OSDK::Control::CtrlData ctrlData(ctrl_flag, _velocity[0], _velocity[1], _velocity[2], _velocity[3]);
+
+    vehicle->control->flightCtrl(ctrlData);
+
+    return true;
+  }
+
   bool VehicleWrapper::obtainReleaseCtrl(bool _enable, int _timeout)
   {
     if (!vehicle)
