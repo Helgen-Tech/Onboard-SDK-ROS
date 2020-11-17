@@ -1529,7 +1529,7 @@ bool VehicleNode::ctrlThread(){
         copyTargetVelocity_[1] = 0.0;
         copyTargetVelocity_[2] = 0.0;
         copyTargetVelocity_[3] = 0.0;
-        ptr_wrapper_->moveCustom(copyTargetVelocity_, true, false); // stable / local
+        ptr_wrapper_->moveCustom(copyTargetVelocity_, true, true); // stable / local
         state_ = eStateControl::WAIT;
         break;
       }
@@ -1542,7 +1542,7 @@ bool VehicleNode::ctrlThread(){
         copyTargetVelocity_[2] = targetVelocity_[2];
         copyTargetVelocity_[3] = targetVelocity_[3];
         lock_.unlock();
-        ptr_wrapper_->moveCustom(copyTargetVelocity_, true, false); // stable / local
+        ptr_wrapper_->moveCustom(copyTargetVelocity_, true, true); // stable / local
         break;
       }
       case eStateControl::RECOVER_CONTROL:
