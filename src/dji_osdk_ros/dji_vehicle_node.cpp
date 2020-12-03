@@ -297,6 +297,8 @@ void VehicleNode::initService()
   waypointv2_subscribe_mission_event_server_ = nh_.advertiseService("dji_osdk_ros/waypointV2_subscribeMissionEvent", &VehicleNode::waypointV2SubscribeMissionEventCallback, this);
   waypointv2_subscribe_mission_state_server_ = nh_.advertiseService("dji_osdk_ros/waypointV2_subscribeMissionState", &VehicleNode::waypointV2SubscribeMissionStateCallback, this);
 
+  crtlAuthService_ = nh_.advertiseService("/dji_control/get_control", &VehicleNode::ctrlAuthService, this);
+  
   ROS_INFO_STREAM("Services startup!");
 }
 
@@ -1441,6 +1443,14 @@ bool VehicleNode::setUpwardsAvoidCallback(AvoidEnable::Request& request, AvoidEn
   {
     response.result = false;
   }
+
+  return true;
+}
+
+bool VehicleNode::ctrlAuthService(std_srvs::SetBool::Request &_req, std_srvs::SetBool::Response &_res){
+  std::cout << "Obtain or Release control" << std::endl;
+  ptr_wrapper_->obtainReleaseCtrl(_req.data, FLIGHT_CONTROL_WAIT_TIMEOUT);
+  _res.success = true;
 
   return true;
 }

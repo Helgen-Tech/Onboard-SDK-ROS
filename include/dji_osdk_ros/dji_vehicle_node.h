@@ -57,6 +57,8 @@
 #include <std_msgs/String.h>
 #include <nmea_msgs/Sentence.h>
 
+#include <std_srvs/SetBool.h>
+
 /*! services */
 #include <dji_osdk_ros/FlightTaskControl.h>
 #include <dji_osdk_ros/SetGoHomeAltitude.h>
@@ -176,6 +178,10 @@ namespace dji_osdk_ros
       bool initTopic();
       bool initDataSubscribeFromFC();
       bool cleanUpSubscribeFromFC();
+
+    private:
+      ros::ServiceServer crtlAuthService_;
+
     protected:
       /*! services */
       /*! for general */
@@ -411,6 +417,10 @@ namespace dji_osdk_ros
       bool initSubscribe();
 
     private:
+      bool ctrlAuthService(std_srvs::SetBool::Request &_req, std_srvs::SetBool::Response &_res);
+
+    private:
+    
       ros::NodeHandle nh_;
       VehicleWrapper* ptr_wrapper_;
       TelemetryType telemetry_from_fc_;
