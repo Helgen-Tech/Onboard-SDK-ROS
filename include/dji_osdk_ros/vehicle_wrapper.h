@@ -101,6 +101,7 @@ namespace dji_osdk_ros
 
       bool monitoredTakeoff(ACK::ErrorCode& ack, int timeout);
       bool monitoredLanding(ACK::ErrorCode& ack, int timeout);
+      bool startForceLanding(int timeout);
       bool moveByPositionOffset(ACK::ErrorCode& ack, int timeout, MoveOffset& p_offset);
 
       bool moveVelocity(std::vector<float> _velocity);

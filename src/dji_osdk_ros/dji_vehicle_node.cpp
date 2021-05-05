@@ -1065,6 +1065,15 @@ bool VehicleNode::taskCtrlCallback(FlightTaskControl::Request&  request, FlightT
         }
         break;
       }
+    case FlightTaskControl::Request::TASK_FORCE_LANDING:
+    {
+        ROS_INFO_STREAM("call force landing service");
+        if (ptr_wrapper_->startForceLanding(FLIGHT_CONTROL_WAIT_TIMEOUT))
+        {
+          response.result = true;
+        }
+        break;
+    }
     default:
       {
         ROS_INFO_STREAM("No recognized task");

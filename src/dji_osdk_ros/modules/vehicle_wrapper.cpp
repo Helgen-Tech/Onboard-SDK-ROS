@@ -1155,6 +1155,26 @@ static T_OsdkOsalHandler osalHandler = {
     return true;
   }
 
+
+  bool VehicleWrapper::startForceLanding(int timeout)
+  {
+    if (!vehicle)
+    {
+      std::cout << "Vehicle is a null value!" << std::endl;
+      return false;
+    }
+    ErrorCode::ErrorCodeType errCode = vehicle->flightController->startForceLandingSync(timeout);
+    if (errCode != ErrorCode::SysCommonErr::Success)
+    {
+      DERROR( "Fail to execute force landing action! Error code: "
+              "%llx\n ",errCode);
+      return false;
+    }
+
+    return true;
+  }
+
+
   bool VehicleWrapper::goHome(ACK::ErrorCode& ack, int timeout)
   {
     ack = vehicle->control->goHome(timeout);
