@@ -1,0 +1,22 @@
+%YAML:1.0
+
+wp_list:
+  wp0:
+    longitude: -5.93138103264697
+    latitude: 37.55865785863975
+    altitude: 5.0
+    damping: 0.0
+
+  wp1:
+    longitude: -5.931044900810017
+    latitude: 37.55836462689588
+    altitude: 5.0
+    damping: 0.0
+
+  wp2:
+    longitude: -5.931352117266381
+    latitude: 37.5583195420324
+    altitude: 5.0
+    damping: 0.0
+wp_number: 3
+idle_velocity: 8.0
