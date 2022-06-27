@@ -102,6 +102,12 @@ target_link_libraries(missions_yaml_corr
         )
 add_dependencies(missions_yaml_corr dji_osdk_ros_generate_messages_cpp)
 
+add_executable(mission_lora_vo mission_lora_vo.cpp)
+target_link_libraries(mission_lora_vo
+        ${PROJECT_NAME}
+        )
+add_dependencies(mission_lora_vo dji_osdk_ros_generate_messages_cpp)
+
 add_executable(human_input_node human_input_node.cpp)
 target_link_libraries(human_input_node
         ${PROJECT_NAME}
