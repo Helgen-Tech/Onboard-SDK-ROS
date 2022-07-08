@@ -97,6 +97,36 @@ target_link_libraries(mission_node
         )
 add_dependencies(mission_node dji_osdk_ros_generate_messages_cpp)
 
+add_executable(missions_node missions_node.cpp)
+target_link_libraries(missions_node
+        ${PROJECT_NAME}
+        )
+add_dependencies(missions_node dji_osdk_ros_generate_messages_cpp)
+
+add_executable(missions_yaml missions_yaml.cpp)
+target_link_libraries(missions_yaml
+        ${PROJECT_NAME}
+        )
+add_dependencies(missions_yaml dji_osdk_ros_generate_messages_cpp)
+
+add_executable(missions_yaml_corr missions_yaml_corr.cpp)
+target_link_libraries(missions_yaml_corr
+        ${PROJECT_NAME}
+        )
+add_dependencies(missions_yaml_corr dji_osdk_ros_generate_messages_cpp)
+
+add_executable(mission_lora_vo mission_lora_vo.cpp)
+target_link_libraries(mission_lora_vo
+        ${PROJECT_NAME}
+        )
+add_dependencies(mission_lora_vo dji_osdk_ros_generate_messages_cpp)
+
+add_executable(human_input_node human_input_node.cpp)
+target_link_libraries(human_input_node
+        ${PROJECT_NAME}
+        )
+add_dependencies(human_input_node dji_osdk_ros_generate_messages_cpp)
+
 add_executable(waypointV2_node waypointV2_node.cpp)
 target_link_libraries(waypointV2_node
         ${PROJECT_NAME}

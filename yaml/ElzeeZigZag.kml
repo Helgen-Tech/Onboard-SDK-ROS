@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2" xmlns:kml="http://www.opengis.net/kml/2.2" xmlns:atom="http://www.w3.org/2005/Atom">
+<Document>
+	<name>ElzeeZigZag</name>
+	<gx:CascadingStyle kml:id="__managed_style_01AC1F487621B9E451C2">
+		<Style>
+			<IconStyle>
+				<scale>1.2</scale>
+				<Icon>
+					<href>https://earth.google.com/earth/rpc/cc/icon?color=1976d2&amp;id=2000&amp;scale=4</href>
+				</Icon>
+				<hotSpot x="64" y="128" xunits="pixels" yunits="insetPixels"/>
+			</IconStyle>
+			<LabelStyle>
+			</LabelStyle>
+			<LineStyle>
+				<color>ff2dc0fb</color>
+				<width>6</width>
+			</LineStyle>
+			<PolyStyle>
+				<color>40ffffff</color>
+			</PolyStyle>
+			<BalloonStyle>
+				<displayMode>hide</displayMode>
+			</BalloonStyle>
+		</Style>
+	</gx:CascadingStyle>
+	<gx:CascadingStyle kml:id="__managed_style_11A40538F321B9E451C1">
+		<Style>
+			<IconStyle>
+				<Icon>
+					<href>https://earth.google.com/earth/rpc/cc/icon?color=1976d2&amp;id=2000&amp;scale=4</href>
+				</Icon>
+				<hotSpot x="64" y="128" xunits="pixels" yunits="insetPixels"/>
+			</IconStyle>
+			<LabelStyle>
+			</LabelStyle>
+			<LineStyle>
+				<color>ff2dc0fb</color>
+				<width>4</width>
+			</LineStyle>
+			<PolyStyle>
+				<color>40ffffff</color>
+			</PolyStyle>
+			<BalloonStyle>
+				<displayMode>hide</displayMode>
+			</BalloonStyle>
+		</Style>
+	</gx:CascadingStyle>
+	<StyleMap id="__managed_style_00B63D0F2321B9E451C1">
+		<Pair>
+			<key>normal</key>
+			<styleUrl>#__managed_style_11A40538F321B9E451C1</styleUrl>
+		</Pair>
+		<Pair>
+			<key>highlight</key>
+			<styleUrl>#__managed_style_01AC1F487621B9E451C2</styleUrl>
+		</Pair>
+	</StyleMap>
+	<Placemark id="0CBF9196D121B9E4EA1A">
+		<name>0</name>
+		<LookAt>
+			<longitude>-5.8587002</longitude>
+			<latitude>37.5196077</latitude>
+			<altitude>15</altitude>
+			<heading>0</heading>
+			<tilt>0</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>122.3293413809188</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_00B63D0F2321B9E451C1</styleUrl>
+		<Point>
+			<coordinates>-5.858358884297528,37.5199198787572,28.60508625189988</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="0F409188C321B9E51F22">
+		<name>1</name>
+		<LookAt>
+			<longitude>-5.8587002</longitude>
+			<latitude>37.5196077</latitude>
+			<altitude>15</altitude>
+			<heading>0</heading>
+			<tilt>0</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>122.3293413809188</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_00B63D0F2321B9E451C1</styleUrl>
+		<Point>
+			<coordinates>-5.858618095349351,37.51990153269821,28.91326897747195</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="01F04FA2AB21B9E55289">
+		<name>2</name>
+		<LookAt>
+			<longitude>-5.8587002</longitude>
+			<latitude>37.5196077</latitude>
+			<altitude>15</altitude>
+			<heading>0</heading>
+			<tilt>0</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>122.3293413809188</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_00B63D0F2321B9E451C1</styleUrl>
+		<Point>
+			<coordinates>-5.858540814794565,37.5197769110298,29.15822716426852</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="09685D8AC521B9E5B148">
+		<name>3</name>
+		<LookAt>
+			<longitude>-5.8587002</longitude>
+			<latitude>37.5196077</latitude>
+			<altitude>15</altitude>
+			<heading>0</heading>
+			<tilt>0</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>122.3293413809188</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_00B63D0F2321B9E451C1</styleUrl>
+		<Point>
+			<coordinates>-5.858783699500203,37.51977813929211,29.90526876834605</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="0969F8893C21B9E5DF65">
+		<name>4</name>
+		<LookAt>
+			<longitude>-5.8587002</longitude>
+			<latitude>37.5196077</latitude>
+			<altitude>15</altitude>
+			<heading>0</heading>
+			<tilt>0</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>122.3293413809188</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_00B63D0F2321B9E451C1</styleUrl>
+		<Point>
+			<coordinates>-5.858702119639027,37.51966020416893,29.44182348676595</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="0DCEF2341221B9E6266F">
+		<name>5</name>
+		<LookAt>
+			<longitude>-5.8587002</longitude>
+			<latitude>37.5196077</latitude>
+			<altitude>15</altitude>
+			<heading>0</heading>
+			<tilt>0</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>122.3293413809188</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_00B63D0F2321B9E451C1</styleUrl>
+		<Point>
+			<coordinates>-5.858946777597169,37.51960507795959,29.95250871954372</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="0C6AC6EAFC21B9E451BF">
+		<name>6</name>
+		<LookAt>
+			<longitude>-5.8589502</longitude>
+			<latitude>37.5194662</latitude>
+			<altitude>8</altitude>
+			<heading>0</heading>
+			<tilt>0</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>121.9864751535897</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_00B63D0F2321B9E451C1</styleUrl>
+		<Point>
+			<coordinates>-5.859085952995395,37.51936131579512,30.04104817907153</coordinates>
+		</Point>
+	</Placemark>
+</Document>
+</kml>

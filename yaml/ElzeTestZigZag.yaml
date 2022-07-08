@@ -1,0 +1,32 @@
+%YAML:1.0
+
+wp_list:
+  wp0:
+    longitude: -5.857844574807461
+    latitude: 37.51862981635439
+    altitude: 15.0
+  wp1:
+    longitude: -5.857661852428684
+    latitude: 37.51822940527474
+    altitude: 15.0
+  wp6:
+    longitude: -5.858598284634292
+    latitude: 37.51755618517512
+    altitude: 15.0
+  wp2:
+    longitude: -5.858142065780857
+    latitude: 37.51827961745656
+    altitude: 15.0
+  wp3:
+    longitude: -5.857911069814202
+    latitude: 37.5179013616585
+    altitude: 15.0
+  wp4:
+    longitude: -5.858436330719653
+    latitude: 37.51799876293898
+    altitude: 15.0
+  wp5:
+    longitude: -5.858295900995723
+    latitude: 37.51775208434502
+    altitude: 12.0
+wp_number: 7

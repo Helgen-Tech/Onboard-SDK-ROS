@@ -1,0 +1,40 @@
+%YAML:1.0
+
+wp_list:
+  wp0:
+    longitude: -5.929608634043287
+    latitude: 37.55969871753678
+    altitude: 15.0
+    damping: '2'
+  wp1:
+    longitude: -5.930023649417184
+    latitude: 37.55927624144562
+    altitude: 15.0
+    damping: '2'
+  wp2:
+    longitude: -5.930406742115658
+    latitude: 37.55912358233227
+    altitude: 15.0
+    damping: '2'
+  wp3:
+    longitude: -5.930428777888545
+    latitude: 37.55876630703847
+    altitude: 15.0
+    damping: '2'
+  wp4:
+    longitude: -5.930809100952336
+    latitude: 37.55870314415439
+    altitude: 15.0
+    damping: '2'
+  wp5:
+    longitude: -5.931296915123514
+    latitude: 37.5583392246272
+    altitude: 12.0
+    damping: '2'
+  wp6:
+    longitude: -5.931629618038822
+    latitude: 37.55843154921544
+    altitude: 8.0
+    damping: '2'
+wp_number: 7
+idle_velocity: '3'

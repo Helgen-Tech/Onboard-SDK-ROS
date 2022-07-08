@@ -119,13 +119,12 @@ namespace dji_osdk_ros
       bool setUpwardsAvoidance(bool enable);
       bool getUpwardsAvoidance(uint8_t& enable);
 
-      bool monitoredTakeoff(int timeout);
-      bool monitoredLanding(int timeout);
+      bool monitoredTakeoff(ACK::ErrorCode& ack, int timeout);
+      bool monitoredLanding(ACK::ErrorCode& ack, int timeout);
+      bool moveByPositionOffset(ACK::ErrorCode& ack, int timeout, MoveOffset& p_offset);
       bool startForceLanding(int timeout);
       bool startConfirmLanding(int timeout);
       bool cancelLanding(int timeout);
-      bool moveByPositionOffset(const JoystickCommand &JoystickCommand,int timeout,
-                                float posThresholdInM = 0.8,float yawThresholdInDeg = 1.0);
       void velocityAndYawRateCtrl(const JoystickCommand &JoystickCommand, int timeMs);
       bool setJoystickMode(const JoystickMode &joystickMode);
       bool JoystickAction(const JoystickCommand &JoystickCommand);
@@ -138,6 +137,12 @@ namespace dji_osdk_ros
       bool getBatteryWholeInfo(DJI::OSDK::BatteryWholeInfo& batteryWholeInfo);
       bool getSingleBatteryDynamicInfo(const DJI::OSDK::DJIBattery::RequestSmartBatteryIndex batteryIndex,
                                        DJI::OSDK::SmartBatteryDynamicInfo& batteryDynamicInfo);
+
+      bool moveVelocity(std::vector<float> _velocity);
+
+      bool moveCustom(std::vector<float> _velocity, bool _stable, bool _localAxis);
+
+      bool obtainReleaseCtrl(bool _enable, int _timeout);
 
       /*! Parts of mfio */
       uint8_t outputMFIO(uint8_t mode, uint8_t channel, uint32_t init_on_time_us, uint16_t freq, bool block, uint8_t gpio_value);
@@ -169,7 +174,7 @@ namespace dji_osdk_ros
       bool getHMSListInfo(HMSPushPacket& hmsPushPacket);
       bool getHMSDeviceIndex(uint8_t& deviceIndex);
       /*! Parts of advanced_sendsing */
-#ifdef ADVANCED_SENSING
+      #ifdef ADVANCED_SENSING
       /*! CameraStream */
       bool startFPVCameraStream(CameraImageCallback cb = NULL, void * cbParam = NULL);
       bool startMainCameraStream(CameraImageCallback cb = NULL, void * cbParam = NULL);
@@ -212,7 +217,7 @@ namespace dji_osdk_ros
         * @brief unsubscribe to VGA (480x640) stereo images
         */
       void unsubscribeVGAImages();
-#endif
+      #endif
       bool isM100();
       bool isM200V2();
       bool isM300();
@@ -255,6 +260,28 @@ namespace dji_osdk_ros
                                              UserData userData);
       Version::FirmWare getFwVersion() const;
       char* getHwVersion() const;
+
+    protected:
+      bool startGlobalPositionBroadcast();
+      Telemetry::Vector3f toEulerAngle(void* quaternionData);
+      void localOffsetFromGpsOffset(Telemetry::Vector3f& deltaNed, void* target, void* origin);
+    
+    public:
+      Vehicle::ActivateData *getActivateData()
+      {
+        return &this->activate_data_;
+      }
+    
+      Vehicle *getVehicle()
+      {
+        return vehicle;
+      }
+    
+      Linker *getLinker()
+      {
+        return linker;
+      }
+
 
     private:
       uint32_t timeout_;

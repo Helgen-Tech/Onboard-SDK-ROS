@@ -49,16 +49,16 @@ VehicleNode::VehicleNode():telemetry_from_fc_(TelemetryType::USE_ROS_BROADCAST),
                            R_ENU2NED_(tf::Matrix3x3(0,  1,  0, 1,  0,  0, 0,  0, -1)),
                            curr_align_state_(AlignStatus::UNALIGNED)
 {
-  nh_.param("/vehicle_node/app_id",        app_id_, 12345);
-  nh_.param("/vehicle_node/enc_key",       enc_key_, std::string("abcde123"));
-  nh_.param("/vehicle_node/acm_name",      device_acm_, std::string("/dev/ttyACM0"));
-  nh_.param("/vehicle_node/serial_name",   device_, std::string("/dev/ttyUSB0"));
-  nh_.param("/vehicle_node/baud_rate",     baud_rate_, 921600);
-  nh_.param("/vehicle_node/app_version",   app_version_, 1);
-  nh_.param("/vehicle_node/drone_version", drone_version_, std::string("M300")); // choose M300 as default
-  nh_.param("/vehicle_node/gravity_const", gravity_const_, 9.801);
-  nh_.param("/vehicle_node/align_time",    align_time_with_FC_, false);
-  nh_.param("/vehicle_node/use_broadcast", user_select_broadcast_, false);
+  nh_.param("vehicle_node/app_id",        app_id_, 12345);
+  nh_.param("vehicle_node/enc_key",       enc_key_, std::string("abcde123"));
+  nh_.param("vehicle_node/acm_name",      device_acm_, std::string("/dev/ttyACM0"));
+  nh_.param("vehicle_node/serial_name",   device_, std::string("/dev/ttyUSB0"));
+  nh_.param("vehicle_node/baud_rate",     baud_rate_, 921600);
+  nh_.param("vehicle_node/app_version",   app_version_, 1);
+  nh_.param("vehicle_node/drone_version", drone_version_, std::string("M300")); // choose M300 as default
+  nh_.param("vehicle_node/gravity_const", gravity_const_, 9.801);
+  nh_.param("vehicle_node/align_time",    align_time_with_FC_, false);
+  nh_.param("vehicle_node/use_broadcast", user_select_broadcast_, false);
   bool enable_ad = false;
 #ifdef ADVANCED_SENSING
   enable_ad = true;
@@ -87,6 +87,10 @@ VehicleNode::VehicleNode():telemetry_from_fc_(TelemetryType::USE_ROS_BROADCAST),
 
 VehicleNode::~VehicleNode()
 {
+
+  state_ = eStateControl::EXIT;
+  controlThread_.join();
+
   if(!ptr_wrapper_->isM100() && telemetry_from_fc_ == TelemetryType::USE_ROS_SUBSCRIBE)
   {
     cleanUpSubscribeFromFC();
@@ -492,6 +496,9 @@ bool VehicleNode::initTopic()
     ptr_wrapper_->subscribeFCTimeInUTCRef(&VehicleNode::FCTimeInUTCCallback, this);
     ptr_wrapper_->subscribePPSSource(&VehicleNode::PPSSourceCallback, this);
   }
+
+  initControlTopics();
+
   return true;
 }
 
@@ -706,6 +713,30 @@ bool VehicleNode::cleanUpSubscribeFromFC()
   return true;
 }
 
+bool VehicleNode::initControlTopics(){
+
+  crtlAuthServ_ = nh_.advertiseService("dji_control/get_control", &VehicleNode::ctrlAuthService, this);
+
+  targetVelocity_.resize(4); 
+  targetVelocity_[0] = 0.0;
+  targetVelocity_[1] = 0.0;
+  targetVelocity_[2] = 0.0;
+  targetVelocity_[3] = 0.0;
+
+  copyTargetVelocity_.resize(4); 
+  copyTargetVelocity_[0] = 0.0;
+  copyTargetVelocity_[1] = 0.0;
+  copyTargetVelocity_[2] = 0.0;
+  copyTargetVelocity_[3] = 0.0;
+
+  velocitySubscriber_ = nh_.subscribe("dji_control/velocity", 1, &VehicleNode::velocityCallback, this);
+
+  controlThread_ = std::thread(&VehicleNode::ctrlThread, this);
+
+  state_ = eStateControl::WAIT;
+    
+  return true;
+}
 
 #ifdef ADVANCED_SENSING
 bool VehicleNode::setupCameraStreamCallback(dji_osdk_ros::SetupCameraStream::Request& request,
@@ -1058,6 +1089,7 @@ bool VehicleNode::taskCtrlCallback(FlightTaskControl::Request&  request, FlightT
       }
     case FlightTaskControl::Request::TASK_LAND:
       {
+        state_ = eStateControl::BRAKE;
         ROS_INFO_STREAM("call land service");
         if (ptr_wrapper_->monitoredLanding(FLIGHT_CONTROL_WAIT_TIMEOUT))
         {
@@ -1092,6 +1124,7 @@ bool VehicleNode::taskCtrlCallback(FlightTaskControl::Request&  request, FlightT
         }
         break;
       }
+
     case FlightTaskControl::Request::TASK_EXIT_LANDING:
       {
         ROS_INFO_STREAM("call cancel landing service");
@@ -1110,6 +1143,7 @@ bool VehicleNode::taskCtrlCallback(FlightTaskControl::Request&  request, FlightT
         }
         break;
     }
+
     case FlightTaskControl::Request::TASK_FORCE_LANDING:
     {
         ROS_INFO_STREAM("call force landing service");
@@ -1754,6 +1788,98 @@ bool VehicleNode::getAvoidEnableStatusCallback(GetAvoidEnable::Request& request,
   return true;
 }
 
+
+void VehicleNode::velocityCallback(const geometry_msgs::TwistStamped::ConstPtr& _msg){
+
+  lock_.lock();
+  targetVelocity_[0] = _msg->twist.linear.x;
+  targetVelocity_[1] = _msg->twist.linear.y;
+  targetVelocity_[2] = _msg->twist.linear.z;
+  targetVelocity_[3] = _msg->twist.angular.x;
+  lock_.unlock();
+
+  if( (targetVelocity_[0] == 0.0) && (targetVelocity_[1] == 0.0) && (targetVelocity_[2] == 0.0) && (targetVelocity_[3] == 0.0) ){
+    state_ = eStateControl::BRAKE;
+  }else{
+    state_ = eStateControl::MOVE_VEL;
+  }
+
+  lastTime_ = std::chrono::high_resolution_clock::now();
+}
+
+bool VehicleNode::ctrlAuthService(std_srvs::SetBool::Request &_req, std_srvs::SetBool::Response &_res){
+
+  enableCtrl_ = _req.data;
+
+  state_ = eStateControl::RECOVER_CONTROL;
+
+  _res.success = true;
+
+  return true;
+}
+
+bool VehicleNode::ctrlThread(){
+
+  std::cout << "Start Control Thread" << std::endl;
+
+  ros::Rate rate(50);
+
+  ACK::ErrorCode ack;
+
+  lastTime_ = std::chrono::high_resolution_clock::now();
+
+  while (fin_ == false && ros::ok()) {     
+    switch(state_){
+      case eStateControl::WAIT:
+      {   
+        // TODO: DO ANYTHING
+        break;
+      }
+      case eStateControl::BRAKE:
+      {   
+        copyTargetVelocity_[0] = 0.0;
+        copyTargetVelocity_[1] = 0.0;
+        copyTargetVelocity_[2] = 0.0;
+        copyTargetVelocity_[3] = 0.0;
+        ptr_wrapper_->moveCustom(copyTargetVelocity_, true, true); // stable / local
+        state_ = eStateControl::WAIT;
+        break;
+      }
+      case eStateControl::MOVE_VEL:
+      {   
+        // std::cout << "Moving in Velocity" << std::endl;
+        lock_.lock();
+        copyTargetVelocity_[0] = targetVelocity_[0];
+        copyTargetVelocity_[1] = targetVelocity_[1];
+        copyTargetVelocity_[2] = targetVelocity_[2];
+        copyTargetVelocity_[3] = targetVelocity_[3];
+        lock_.unlock();
+        ptr_wrapper_->moveCustom(copyTargetVelocity_, true, true); // stable / local
+        break;
+      }
+      case eStateControl::RECOVER_CONTROL:
+      {
+        std::cout << "Obtain or Release control: " << enableCtrl_ << std::endl;
+        ptr_wrapper_->obtainReleaseCtrl(enableCtrl_, FLIGHT_CONTROL_WAIT_TIMEOUT);
+        state_ = eStateControl::WAIT;
+        break;
+      }
+      case eStateControl::EXIT:
+        std::cout << "\nEXIT..." << std::endl;
+        fin_ = true;
+        break;
+      }
+
+    auto tActual = std::chrono::high_resolution_clock::now();
+    if(std::chrono::duration_cast<std::chrono::milliseconds>(tActual - lastTime_).count() > 500){
+      state_ = eStateControl::BRAKE;
+    }
+
+    rate.sleep();
+  }
+
+  return true;
+
 bool VehicleNode::obtainReleaseControlAuthorityCallback(ObtainControlAuthority::Request& request, ObtainControlAuthority::Response& response)
 {
   if(request.enable_obtain)
@@ -1800,6 +1926,7 @@ bool VehicleNode::emergencyBrakeCallback(EmergencyBrake::Request& request, Emerg
   response.result = ptr_wrapper_->emergencyBrake();
 
   return response.result;
+
 }
 
 int main(int argc, char** argv)

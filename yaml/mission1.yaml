@@ -1,0 +1,21 @@
+%YAML:1.0
+
+wp_number: 4
+
+wp_list:
+   wp0: 
+      longitude: -5.86
+      latitude: 37.56
+      altitude: 17.5
+   wp1:
+      longitude: -5.89
+      latitude: 37.59
+      altitude: 17.9
+   wp2:
+      longitude: -5.90
+      latitude: 37.65
+      altitude: 23.0
+   wp3:
+      longitude: -5.90
+      latitude: 37.65
+      altitude: 23.0

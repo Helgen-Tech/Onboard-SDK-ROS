@@ -38,6 +38,10 @@
 
 #include <memory>
 #include <string>
+#include <mutex>
+#include <iostream>
+#include <thread>
+#include <chrono>
 
 //! ROS standard msgs
 #include <tf/tf.h>
@@ -170,6 +174,9 @@
 #include <dji_osdk_ros/WaypointV2MissionEventPush.h>
 #include <dji_osdk_ros/WaypointV2MissionStatePush.h>
 
+#include <geometry_msgs/TwistStamped.h>
+#include <std_srvs/SetBool.h>
+
 #define C_EARTH (double)6378137.0
 #define C_PI (double)3.141592653589793
 #define DEG2RAD(DEG) ((DEG) * ((C_PI) / (180.0)))
@@ -197,6 +204,9 @@ namespace dji_osdk_ros
       bool initTopic();
       bool initDataSubscribeFromFC();
       bool cleanUpSubscribeFromFC();
+
+      bool initControlTopics();
+
     protected:
       /*! services */
       /*! for general */
@@ -247,14 +257,14 @@ namespace dji_osdk_ros
       /*! for payload device */
       ros::ServiceServer send_data_to_payload_device_server_;
       /*! for advanced sensing */
-#ifdef ADVANCED_SENSING
+      #ifdef ADVANCED_SENSING
       ros::ServiceServer setup_camera_stream_server_;
       ros::ServiceServer setup_camera_h264_server_;
       ros::ServiceServer subscribe_stereo_240p_server_;
       ros::ServiceServer subscribe_stereo_depth_server_;
       ros::ServiceServer subscribe_stereo_vga_server_;
       ros::ServiceServer get_m300_stereo_params_server_;
-#endif
+      #endif
       /*! for mission */
       ros::ServiceServer waypoint_upload_server_;
       ros::ServiceServer waypoint_action_server_;
@@ -338,6 +348,10 @@ namespace dji_osdk_ros
       ros::Publisher waypointV2_mission_state_publisher_;
       ros::Publisher waypointV2_mission_event_publisher_;
 
+    private:
+      ros::Subscriber velocitySubscriber_;
+      ros::ServiceServer crtlAuthServ_;
+
     protected:
       /*! for general */
       bool getDroneTypeCallback(dji_osdk_ros::GetDroneType::Request &request,
@@ -398,7 +412,7 @@ namespace dji_osdk_ros
       bool sendToPayloadCallback(dji_osdk_ros::SendPayloadData::Request& request,
                                  dji_osdk_ros::SendPayloadData::Response& response);
       /*! for advanced sensing conrol */
-#ifdef ADVANCED_SENSING
+      #ifdef ADVANCED_SENSING
       bool setupCameraStreamCallback(dji_osdk_ros::SetupCameraStream::Request& request,
                                      dji_osdk_ros::SetupCameraStream::Response& response);
       bool setupCameraH264Callback(dji_osdk_ros::SetupCameraH264::Request& request,
@@ -413,7 +427,7 @@ namespace dji_osdk_ros
       bool getM300StereoParamsCallback(dji_osdk_ros::GetM300StereoParams::Request& request,
                                        dji_osdk_ros::GetM300StereoParams::Response& response);
       void publishAdvancedSeningData();
-#endif
+      #endif
       /*! for mission service callback*/
       // mission manager
       bool missionStatusCallback(dji_osdk_ros::MissionStatus::Request&  request,
@@ -473,6 +487,32 @@ namespace dji_osdk_ros
       bool initSubscribe();
 
     private:
+      void velocityCallback(const geometry_msgs::TwistStamped::ConstPtr& _msg);
+
+      bool ctrlAuthService(std_srvs::SetBool::Request &_req, std_srvs::SetBool::Response &_res);
+
+      bool ctrlThread();
+
+    private:
+      bool fin_ = false;
+
+      enum class eStateControl
+      {   
+          WAIT,
+          BRAKE,
+          MOVE_VEL,
+          RECOVER_CONTROL,
+          EXIT
+      }state_;
+
+      std::mutex lock_;
+      std::thread controlThread_;
+      std::vector<float> targetVelocity_, copyTargetVelocity_;
+
+      bool enableCtrl_;
+
+      std::chrono::time_point<std::chrono::high_resolution_clock> lastTime_;
+
       ros::NodeHandle nh_;
       VehicleWrapper* ptr_wrapper_;
       TelemetryType telemetry_from_fc_;
