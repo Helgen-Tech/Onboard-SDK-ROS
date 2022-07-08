@@ -133,6 +133,13 @@ namespace dji_osdk_ros
       bool turnOnOffMotors(bool OnOff,int timeOut = 1);
       bool killSwitch(bool enable, char msg[10], int timeOut = 1);
       bool emergencyBrake();
+      
+      bool moveVelocity(std::vector<float> _velocity);
+
+      bool moveCustom(std::vector<float> _velocity, bool _stable, bool _localAxis);
+
+      bool obtainReleaseCtrl(bool _enable, int _timeout);
+
 
       /*! Parts of Battery */
       bool getBatteryWholeInfo(DJI::OSDK::BatteryWholeInfo& batteryWholeInfo);
@@ -169,7 +176,7 @@ namespace dji_osdk_ros
       bool getHMSListInfo(HMSPushPacket& hmsPushPacket);
       bool getHMSDeviceIndex(uint8_t& deviceIndex);
       /*! Parts of advanced_sendsing */
-#ifdef ADVANCED_SENSING
+      #ifdef ADVANCED_SENSING
       /*! CameraStream */
       bool startFPVCameraStream(CameraImageCallback cb = NULL, void * cbParam = NULL);
       bool startMainCameraStream(CameraImageCallback cb = NULL, void * cbParam = NULL);
@@ -212,7 +219,7 @@ namespace dji_osdk_ros
         * @brief unsubscribe to VGA (480x640) stereo images
         */
       void unsubscribeVGAImages();
-#endif
+      #endif
       bool isM100();
       bool isM200V2();
       bool isM300();
