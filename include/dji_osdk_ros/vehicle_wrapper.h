@@ -121,12 +121,10 @@ namespace dji_osdk_ros
 
       bool monitoredTakeoff(ACK::ErrorCode& ack, int timeout);
       bool monitoredLanding(ACK::ErrorCode& ack, int timeout);
-      bool startForceLanding(int timeout);
       bool moveByPositionOffset(ACK::ErrorCode& ack, int timeout, MoveOffset& p_offset);
       bool startForceLanding(int timeout);
       bool startConfirmLanding(int timeout);
       bool cancelLanding(int timeout);
-      bool moveByPositionOffset(ACK::ErrorCode& ack, int timeout, MoveOffset& p_offset);
       void velocityAndYawRateCtrl(const JoystickCommand &JoystickCommand, int timeMs);
       bool setJoystickMode(const JoystickMode &joystickMode);
       bool JoystickAction(const JoystickCommand &JoystickCommand);
