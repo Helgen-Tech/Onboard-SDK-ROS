@@ -19,6 +19,14 @@ FOREACH(EXAMPLE ${EXAMPLES})
   TARGET_LINK_LIBRARIES(${MY_TARGET}
                         ${PROJECT_NAME}
                         )
+  add_executable(waypointV2_lora_node samples/waypointV2_lora_node.cpp)
+  target_link_libraries(waypointV2_lora_node ${PROJECT_NAME})
+  add_dependencies(waypointV2_lora_node dji_osdk_ros_generate_messages_cpp)
+
+  #add_executable(waypointV2_test samples/waypointV2_test.cpp)
+  #target_link_libraries(waypointV2_test ${PROJECT_NAME})
+  #add_dependencies(waypointV2_test dji_osdk_ros_generate_messages_cpp)
+
 
   INSTALL(TARGETS ${MY_TARGET}
           ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
