@@ -8,6 +8,6 @@
     <param name="app_version" type="int" value="1"/>
     <param name="align_time" type="bool" value="false"/>
     <param name="enc_key" type="string" value="06d8761c5fb748bdde996d37a6b375f81088c0d408ef221b7f15e4252c18f800"/>
-    <param name="use_broadcast" type="bool" value="false"/>
+    <param name="use_broadcast" type="bool" value="true"/>
     </node>
 </launch>

@@ -55,7 +55,7 @@ using namespace dji_osdk_ros;
 //global variables
 
 std::string mission_file_path;
-uint8_t mission_state = 0;
+uint8_t mission_state = 0xf; //0 means mission completed, so use 15 for init
 bool uploadedMission = false;
 bool activatedLanding = false;
 short focus_trigger = 4;
@@ -146,12 +146,12 @@ void waypointV2MissionStateSubCallback(const dji_osdk_ros::WaypointV2MissionStat
 
 void setWaypointV2Defaults(dji_osdk_ros::WaypointV2& waypointV2)
 {
-  waypointV2.waypointType = dji_osdk_ros::DJIWaypointV2FlightPathModeCoordinateTurn;
+  waypointV2.waypointType = dji_osdk_ros::DJIWaypointV2FlightPathModeGoToPointInAStraightLineAndStop;
   waypointV2.headingMode = dji_osdk_ros::DJIWaypointV2HeadingModeAuto;
   waypointV2.config.useLocalCruiseVel = 0;
   waypointV2.config.useLocalMaxVel = 0;
 
-  waypointV2.dampingDistance = 40;
+  waypointV2.dampingDistance = 1;
   waypointV2.heading = 0;
   waypointV2.turnMode = dji_osdk_ros::DJIWaypointV2TurnModeClockwise;
 
@@ -180,11 +180,11 @@ std::vector<dji_osdk_ros::WaypointV2> generatePolygonWaypoints(ros::NodeHandle &
     std::string wp_name = "wp0";
     auto wp0 = wpList[wp_name];
 
-    //setWaypointV2Defaults(startPoint);
-    //startPoint.latitude  = (float)wp0["latitude"] * C_PI / 180.0;
-    //startPoint.longitude = (float)wp0["longitude"] * C_PI / 180.0;
-    startPoint.latitude  = (float)wp0["latitude"];
-    startPoint.longitude = (float)wp0["longitude"];
+    setWaypointV2Defaults(startPoint);
+    startPoint.latitude  = (float)wp0["latitude"] * C_PI / 180.0;
+    startPoint.longitude = (float)wp0["longitude"] * C_PI / 180.0;
+    //startPoint.latitude  = (float)wp0["latitude"];
+    //startPoint.longitude = (float)wp0["longitude"];
     startPoint.relativeHeight = (float)wp0["altitude"];
     startPoint.dampingDistance = (float)wp0["damping"];
 
@@ -197,12 +197,12 @@ std::vector<dji_osdk_ros::WaypointV2> generatePolygonWaypoints(ros::NodeHandle &
         std::string wp_name = "wp" + std::to_string(i);
         auto wpN = wpList[wp_name];
         dji_osdk_ros::WaypointV2 waypointV2;
-        //setWaypointV2Defaults(waypointV2);
+        setWaypointV2Defaults(waypointV2);
 
-        //waypointV2.latitude = (float)wpN["latitude"] * C_PI / 180.0;
-        //waypointV2.longitude = (float)wpN["longitude"] * C_PI / 180.0;
-        waypointV2.latitude = (float)wpN["latitude"];
-        waypointV2.longitude = (float)wpN["longitude"];
+        waypointV2.latitude = (float)wpN["latitude"] * C_PI / 180.0;
+        waypointV2.longitude = (float)wpN["longitude"] * C_PI / 180.0;
+        //waypointV2.latitude = (float)wpN["latitude"];
+        //waypointV2.longitude = (float)wpN["longitude"];
         std::cout << "wp" << i << " lat: " << waypointV2.latitude << " lon: " << waypointV2.longitude << std::endl;
         waypointV2.relativeHeight = (float)wpN["altitude"]; 
         waypointV2.dampingDistance = (float)wpN["damping"];
@@ -216,6 +216,7 @@ bool initWaypointV2Setting(ros::NodeHandle &nh)
 {
     waypointV2_init_setting_client = nh.serviceClient<dji_osdk_ros::InitWaypointV2Setting>("dji_osdk_ros/waypointV2_initSetting");
     //These two parameters will be ignored when passed to the function, they were kept just to preserve the function prototype
+    dji_osdk_ros::InitWaypointV2Setting initWaypointV2Setting_;
     initWaypointV2Setting_.request.polygonNum = 6;
     initWaypointV2Setting_.request.radius = 6;
     //this changed to the fit the number of waypoints in the file; the generation of action is moved to after we know the mission size
@@ -234,7 +235,10 @@ bool initWaypointV2Setting(ros::NodeHandle &nh)
 
     /*! Generate actions. Changed */
     generateWaypointV2Actions(nh, initWaypointV2Setting_.request.waypointV2InitSettings.missTotalLen);
-    
+    for (int i = 0; i < initWaypointV2Setting_.request.waypointV2InitSettings.mission.size(); i++){
+      ROS_INFO("x: %f, y: %f, z: %f", initWaypointV2Setting_.request.waypointV2InitSettings.mission[i].positionX, initWaypointV2Setting_.request.waypointV2InitSettings.mission[i].positionY, initWaypointV2Setting_.request.waypointV2InitSettings.mission[i].positionZ);
+    }
+     
     waypointV2_init_setting_client.call(initWaypointV2Setting_);
     if (initWaypointV2Setting_.response.result)
     {
@@ -242,7 +246,7 @@ bool initWaypointV2Setting(ros::NodeHandle &nh)
     }
     else
     {
-		std::cout << "response: " << initWaypointV2Setting_.response << std::endl;
+std::cout << "response: " << initWaypointV2Setting_.response << std::endl;
       ROS_ERROR("Init mission setting failed!\n");
     }
 
@@ -497,9 +501,17 @@ void posOffsetsCallback(const geometry_msgs::Point32::ConstPtr& msg)
     offsets = *msg;
 
     mOff.lock();
-    x_offset = offsets.x;
-    y_offset = offsets.y;
-    z_offset = offsets.z;
+    //x_offset = offsets.x;
+    //y_offset = offsets.y;
+    //z_offset = offsets.z;
+    if (mission_state == 0x0){
+      JoystickCommand js;
+      js.x = offsets.x;
+      js.y = offsets.y;
+      js.z = offsets.z;
+      js.yaw = 0.0;
+      moveByPosOffset(js, pos_thr, yaw_thr);
+    }
     mOff.unlock();
 }
 
@@ -558,6 +570,7 @@ void ModeCallback(const std_msgs::UInt8::ConstPtr& msg)
         set_focus_point();
     }
 }
+
 
 void HeightCallback(const std_msgs::Float32::ConstPtr& msg)
 {
@@ -671,20 +684,6 @@ int main(int argc, char** argv)
 
     // LoRa Navigation (offset)
     ROS_INFO("Switching to radio/offset navigation.");
-    JoystickCommand js;
-    js.x = x_offset;
-    js.y = x_offset;
-    js.z = x_offset;
-    js.yaw = x_offset;
-    while (ros::ok){
-	    if (moveByPosOffset(js, pos_thr, yaw_thr))
-	    {
-		ROS_INFO("Switching to radio/offset navigation.");
-		offset_completed = true;
-	    }
-		ROS_INFO("Looping...");
-		ros::Duration(5).sleep();
-	}
 
     ros::waitForShutdown();
 }
