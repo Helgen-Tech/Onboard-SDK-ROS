@@ -531,7 +531,7 @@ bool VehicleNode::waypointV2InitSettingCallback(
   /*! Init waypoint settings*/
   DJI::OSDK::WayPointV2InitSettings missionInitSettings;
   DJI::OSDK::WaypointV2 waypointV2Vector;
-  missionInitSettings.missionID                         = rand() + int(time(0));
+  missionInitSettings.missionID                         = rand();
   missionInitSettings.repeatTimes                       = request.waypointV2InitSettings.repeatTimes;
   missionInitSettings.finishedAction                    = static_cast<DJI::OSDK::DJIWaypointV2MissionFinishedAction>(request.waypointV2InitSettings.finishedAction);
   missionInitSettings.maxFlightSpeed                    = request.waypointV2InitSettings.maxFlightSpeed;
@@ -559,10 +559,11 @@ bool VehicleNode::waypointV2InitSettingCallback(
 
     missionInitSettings.mission.push_back(waypointV2Vector);
   }
-  //ROS_INFO("Initial lat: %f", missionInitSettings.mission[0].latitude);
+
   missionInitSettings.missTotalLen = missionInitSettings.mission.size();
 
   response.result = ptr_wrapper_->initWaypointV2(&missionInitSettings,WAIT_TIMEOUT);
+
   return response.result;
 
 }
