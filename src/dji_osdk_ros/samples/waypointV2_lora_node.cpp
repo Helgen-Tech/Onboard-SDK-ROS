@@ -55,7 +55,9 @@ using namespace dji_osdk_ros;
 //global variables
 
 std::string mission_file_path;
-uint8_t mission_state = 0xf; //0 means mission completed, so use 15 for init
+uint8_t mission_state = 0x00;
+bool userInterrupt = false; //user input on joystick detected
+//mission state of 
 bool uploadedMission = false;
 bool activatedLanding = false;
 short focus_trigger = 4;
@@ -76,6 +78,7 @@ std::mutex mGPS;
 std::mutex mState;
 
 ros::ServiceClient flight_control_client;
+ros::ServiceClient obtain_release_control_client;
 ros::Publisher correctedGPS_publisher_;
 
 bool moveByPosOffset(const JoystickCommand &offsetDesired,
@@ -102,29 +105,29 @@ void waypointV2MissionEventSubCallback(const dji_osdk_ros::WaypointV2MissionEven
 {
   waypoint_V2_mission_event_push_ = *waypointV2MissionEventPush;
 
-  //ROS_INFO("waypoint_V2_mission_event_push_.event ID :0x%x\n", waypoint_V2_mission_event_push_.event);
+  ROS_INFO("waypoint_V2_mission_event_push_.event ID :0x%x\n", waypoint_V2_mission_event_push_.event);
 
   if(waypoint_V2_mission_event_push_.event == 0x01)
   {
-    //ROS_INFO("interruptReason:0x%x\n", waypoint_V2_mission_event_push_.interruptReason);
+    ROS_INFO("interruptReason:0x%x\n", waypoint_V2_mission_event_push_.interruptReason);
   }
   if(waypoint_V2_mission_event_push_.event == 0x02)
   {
-    //ROS_INFO("recoverProcess:0x%x\n", waypoint_V2_mission_event_push_.recoverProcess);
+    ROS_INFO("recoverProcess:0x%x\n", waypoint_V2_mission_event_push_.recoverProcess);
   }
   if(waypoint_V2_mission_event_push_.event== 0x03)
   {
-    //ROS_INFO("finishReason:0x%x\n", waypoint_V2_mission_event_push_.finishReason);
+    ROS_INFO("finishReason:0x%x\n", waypoint_V2_mission_event_push_.finishReason);
   }
 
   if(waypoint_V2_mission_event_push_.event == 0x10)
   {
-    //ROS_INFO("current waypointIndex:%d\n", waypoint_V2_mission_event_push_.waypointIndex);
+    ROS_INFO("current waypointIndex:%d\n", waypoint_V2_mission_event_push_.waypointIndex);
   }
 
   if(waypoint_V2_mission_event_push_.event == 0x11)
   {
-    //ROS_INFO("currentMissionExecNum:%d\n", waypoint_V2_mission_event_push_.currentMissionExecNum);
+    ROS_INFO("currentMissionExecNum:%d\n", waypoint_V2_mission_event_push_.currentMissionExecNum);
   }
 }
 
@@ -141,6 +144,7 @@ void waypointV2MissionStateSubCallback(const dji_osdk_ros::WaypointV2MissionStat
 
   mState.lock();
   mission_state = waypoint_V2_mission_state_push_.state;
+  ROS_INFO("Mission State: %i", mission_state);
   mState.unlock();
 }
 
@@ -223,7 +227,8 @@ bool initWaypointV2Setting(ros::NodeHandle &nh)
     //initWaypointV2Setting_.request.actionNum = 5;
 
     initWaypointV2Setting_.request.waypointV2InitSettings.repeatTimes = 1;
-    initWaypointV2Setting_.request.waypointV2InitSettings.finishedAction = initWaypointV2Setting_.request.waypointV2InitSettings.DJIWaypointV2MissionFinishedNoAction; // Drone just hovers and awaits further input
+    //initWaypointV2Setting_.request.waypointV2InitSettings.finishedAction = initWaypointV2Setting_.request.waypointV2InitSettings.DJIWaypointV2MissionFinishedNoAction; // Drone just hovers and awaits further input
+    initWaypointV2Setting_.request.waypointV2InitSettings.finishedAction = initWaypointV2Setting_.request.waypointV2InitSettings.DJIWaypointV2MissionFinishedContinueUntilStop; // Drone just hovers and awaits further input
     initWaypointV2Setting_.request.waypointV2InitSettings.maxFlightSpeed = 10;
     initWaypointV2Setting_.request.waypointV2InitSettings.autoFlightSpeed = 2;
     initWaypointV2Setting_.request.waypointV2InitSettings.exitMissionOnRCSignalLost = 1;
@@ -324,9 +329,8 @@ bool startWaypointV2Mission(ros::NodeHandle &nh)
     return startWaypointV2Mission_.response.result;
 }
 
-bool stopWaypointV2Mission(ros::NodeHandle &nh)
+bool stopWaypointV2Mission()
 {
-    waypointV2_stop_mission_client = nh.serviceClient<dji_osdk_ros::StopWaypointV2Mission>("dji_osdk_ros/waypointV2_stopMission");
     waypointV2_stop_mission_client.call(stopWaypointV2Mission_);
 
     if(stopWaypointV2Mission_.response.result)
@@ -455,7 +459,7 @@ bool runWaypointV2Mission(ros::NodeHandle &nh)
     {
         return false;
     }
-    sleep(timeout);
+    //sleep(timeout);
 
     /*! upload mission */
     result = uploadWaypointV2Mission(nh);
@@ -463,7 +467,7 @@ bool runWaypointV2Mission(ros::NodeHandle &nh)
     {
         return false;
     }
-    sleep(timeout);
+    //sleep(timeout);
 
     /*! upload  actions */
     result = uploadWaypointV2Action(nh);
@@ -471,7 +475,7 @@ bool runWaypointV2Mission(ros::NodeHandle &nh)
     {
         return false;
     }
-    sleep(timeout);
+    //sleep(timeout);
 
     /*! set global cruise speed */
     //We used to read this from the yaml file, for simplicity let's set it here for now.
@@ -480,7 +484,7 @@ bool runWaypointV2Mission(ros::NodeHandle &nh)
     {
         return false;
     }
-    sleep(timeout);
+    //sleep(timeout);
 
     /*! start mission */
     result = startWaypointV2Mission(nh);
@@ -488,11 +492,31 @@ bool runWaypointV2Mission(ros::NodeHandle &nh)
     {
         return false;
     }
-    sleep(20);
+    //while(mission_state != 0x6 | mission_state != 0x0);
+    //sleep(100);
 
     return true;
 }
 
+bool joystickActivityCallback(const sensor_msgs::Joy::ConstPtr& msg)
+{
+    //std::vector<float> joyInputs = *msg.axes;
+    sensor_msgs::Joy joyInputs = *msg;
+    //userInterrupt is true if any axis of the joystick shows nonzero value. Index 4 is not included as it is not an axis
+    bool nz_axis = false;
+    nz_axis = (!(abs(joyInputs.axes[0]) < 1e-9) | !(abs(joyInputs.axes[1]) < 1e-9) |
+               !(abs(joyInputs.axes[2]) < 1e-9) | !(abs(joyInputs.axes[3]) < 1e-9) |
+               !(abs(joyInputs.axes[5]) < 1e-9));
+    if(nz_axis) //set flag to true permanently if user input detected
+        userInterrupt = true;
+    
+    if(userInterrupt & (mission_state > 0x0))
+        stopWaypointV2Mission();
+
+    //ROS_INFO("axes[0]: %f", joyInputs.axes[0]);
+    ROS_INFO("RC Joystick Input: %i\n", nz_axis);
+
+}
 /********************** Added functions *********************/
 
 void posOffsetsCallback(const geometry_msgs::Point32::ConstPtr& msg)
@@ -501,17 +525,36 @@ void posOffsetsCallback(const geometry_msgs::Point32::ConstPtr& msg)
     offsets = *msg;
 
     mOff.lock();
-    //x_offset = offsets.x;
-    //y_offset = offsets.y;
-    //z_offset = offsets.z;
-    if (mission_state == 0x0){
+    /*
+    std::cout << "Mission State: " << DJIWaypointV2MissionState::DJIWaypointV2MissionStateUnWaypointActionActuatorknown << std::endl;
+    std::cout << "Mission State: " << DJIWaypointV2MissionState::DJIWaypointV2MissionStateDisconnected << std::endl;
+    std::cout << "Mission State: " << DJIWaypointV2MissionState::DJIWaypointV2MissionStateReadyToExecute << std::endl;
+    std::cout << "Mission State: " << DJIWaypointV2MissionState::DJIWaypointV2MissionStateExecuting << std::endl;
+    std::cout << "Mission State: " << DJIWaypointV2MissionState::DJIWaypointV2MissionStateInterrupted << std::endl;
+    std::cout << "Mission State: " << DJIWaypointV2MissionState::DJIWaypointV2MissionStateResumeAfterInterrupted << std::endl;
+    std::cout << "Mission State: " << DJIWaypointV2MissionState::DJIWaypointV2MissionStateExitMission << std::endl;
+    std::cout << "Mission State: " << DJIWaypointV2MissionState::DJIWaypointV2MissionStateFinishedMission << std::endl;
+    */
+    dji_osdk_ros::ObtainControlAuthority authority_request;
+    authority_request.request.enable_obtain = false;
+    
+
+    if (!userInterrupt & (mission_state == 0x0)){
       JoystickCommand js;
       js.x = offsets.x;
       js.y = offsets.y;
       js.z = offsets.z;
       js.yaw = 0.0;
+      //obtain control
+      authority_request.request.enable_obtain = true;
+      obtain_release_control_client.call(authority_request);
       moveByPosOffset(js, pos_thr, yaw_thr);
+      //ROS_INFO
+      //release control
+      authority_request.request.enable_obtain = false;
+      obtain_release_control_client.call(authority_request);
     }
+
     mOff.unlock();
 }
 
@@ -660,8 +703,9 @@ int main(int argc, char** argv)
     correctedGPS_publisher_    = nh.advertise<std_msgs::Float32>("dji_osdk_ros/correctedGPSHeight",10);
     ros::Subscriber height_subscriber         = nh.subscribe<std_msgs::Float32>("dji_osdk_ros/height_above_takeoff", 1, &HeightCallback);
     ros::Subscriber flight_status_subscriber  = nh.subscribe<std_msgs::UInt8>("dji_osdk_ros/flight_status", 1, &FlightStatusCallback);
-
-
+    ros::Subscriber joySubscriber             = nh.subscribe<sensor_msgs::Joy>("dji_osdk_ros/rc", 1, &joystickActivityCallback);
+    waypointV2_stop_mission_client = nh.serviceClient<dji_osdk_ros::StopWaypointV2Mission>("dji_osdk_ros/waypointV2_stopMission");
+    obtain_release_control_client = nh.serviceClient<dji_osdk_ros::ObtainControlAuthority>("/obtain_release_control_authority");
 
     if(argc < 2)
     {
@@ -673,17 +717,18 @@ int main(int argc, char** argv)
     
 
     ros::Duration(1).sleep();
-    ros::AsyncSpinner spinner(1);
+    ros::AsyncSpinner spinner(3);
     spinner.start();
 
     // Waypoint mission
     ROS_INFO("Executing approximation sequence.");
-    runWaypointV2Mission(nh);
-    ros::Duration(10).sleep();
-    ROS_INFO("First approximation completed.");
+    int result = runWaypointV2Mission(nh);
+    ROS_INFO("Waypoint Mission run %s",(result == 0 ? "failure" : "success"));
+    //ros::Duration(10).sleep();
+    //ROS_INFO("First approximation completed.");
 
     // LoRa Navigation (offset)
-    ROS_INFO("Switching to radio/offset navigation.");
+    //ROS_INFO("Switching to radio/offset navigation.");
 
     ros::waitForShutdown();
 }
