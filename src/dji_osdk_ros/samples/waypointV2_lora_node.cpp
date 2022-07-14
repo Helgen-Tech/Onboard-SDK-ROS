@@ -47,6 +47,9 @@
 
 #include <dji_osdk_ros/SetJoystickMode.h>
 #include <dji_osdk_ros/JoystickAction.h>
+#include <dji_osdk_ros/EmergencyBrake.h>
+
+#include <math.h>
 
 
 using namespace DJI::OSDK;
@@ -77,6 +80,9 @@ std::mutex mCorr;
 std::mutex mGPS;
 std::mutex mState;
 
+sensor_msgs::NavSatFix gps_position;
+geometry_msgs::Quaternion imu_quat;
+
 ros::ServiceClient flight_control_client;
 ros::ServiceClient obtain_release_control_client;
 ros::Publisher correctedGPS_publisher_;
@@ -88,6 +94,7 @@ bool moveByPosOffset(const JoystickCommand &offsetDesired,
 void gpsPositionSubCallback(const sensor_msgs::NavSatFix::ConstPtr& gpsPosition)
 {
     gps_position_ = *gpsPosition;
+    gps_position = gps_position_; //copy to global GPS position variable
     // Adapted based on our missions node
     mGPS.lock();
     altitude = gps_position_.altitude;
@@ -216,7 +223,46 @@ std::vector<dji_osdk_ros::WaypointV2> generatePolygonWaypoints(ros::NodeHandle &
     return waypointList;
 }
 
-bool initWaypointV2Setting(ros::NodeHandle &nh)
+std::vector<dji_osdk_ros::WaypointV2> generateOffsetWaypoints(ros::NodeHandle &nh)
+{
+    // Let's create a vector to store our waypoints in.
+    std::vector<dji_osdk_ros::WaypointV2> waypointList;
+    
+    float curr_latitude = gps_position.latitude;
+    float curr_longitude = gps_position.longitude;
+    float curr_altitude = gps_position.altitude;
+
+    geometry_msgs::Quaternion orientation_NED = imu_quat;
+
+    //dji_osdk_ros::WaypointV2 endpoint;
+    //setWaypointV2Defaults(endpoint);
+    
+
+    /*endpoint.latitude  = (float)wp0["latitude"] * C_PI / 180.0;
+    endpoint.longitude = (float)wp0["longitude"] * C_PI / 180.0;
+    endpoint.relativeHeight = (float)wp0["altitude"];
+    endpoint.dampingDistance = (float)wp0["damping"];
+
+    std::cout << "wp0 lat: " << startPoint.latitude << "lon: " << startPoint.longitude << std::endl;
+    
+    waypointList.push_back(startPoint);
+    */
+    return waypointList;
+}
+
+std::vector<float> metres_to_lon_lat_offset(float orig_lon, float orig_lat, float dx, float dy)
+{
+    std::vector<float> dlon_dlat;
+    float dlon = orig_lon + dy/111111.00;
+    float orig_lat_rad = orig_lat*C_PI/180;
+    float dlat = orig_lat + float(dx / 111111.00) * cos(orig_lat_rad);
+    dlon_dlat.push_back(dlon);
+    dlon_dlat.push_back(dlat);
+    ROS_INFO("Offset Coords: Lon: %f, Lat: %f", dlon, dlat);
+    return dlon_dlat;
+}
+//mode 0, read from yaml file. Mode 1, offset navigation
+bool initWaypointV2Setting(ros::NodeHandle &nh, int mode) 
 {
     waypointV2_init_setting_client = nh.serviceClient<dji_osdk_ros::InitWaypointV2Setting>("dji_osdk_ros/waypointV2_initSetting");
     //These two parameters will be ignored when passed to the function, they were kept just to preserve the function prototype
@@ -235,7 +281,14 @@ bool initWaypointV2Setting(ros::NodeHandle &nh)
     initWaypointV2Setting_.request.waypointV2InitSettings.gotoFirstWaypointMode = initWaypointV2Setting_.request.waypointV2InitSettings.DJIWaypointV2MissionGotoFirstWaypointModePointToPoint;
     // The function generatePolygon has been changed to populate the waypoint list 
     // with the content of the mission fila and match the waypoint V2 definitions
-    initWaypointV2Setting_.request.waypointV2InitSettings.mission = generatePolygonWaypoints(nh, initWaypointV2Setting_.request.radius, initWaypointV2Setting_.request.polygonNum);
+    if(mode == 0)
+    {
+        initWaypointV2Setting_.request.waypointV2InitSettings.mission = generatePolygonWaypoints(nh, initWaypointV2Setting_.request.radius, initWaypointV2Setting_.request.polygonNum);
+    }
+    /*else if(mode == 1)
+    {
+        initWaypointV2Setting_.request.waypointV2InitSettings.mission =
+    }*/
     initWaypointV2Setting_.request.waypointV2InitSettings.missTotalLen = initWaypointV2Setting_.request.waypointV2InitSettings.mission.size();
 
     /*! Generate actions. Changed */
@@ -454,7 +507,7 @@ bool runWaypointV2Mission(ros::NodeHandle &nh)
     waypointV2_mission_event_push_client.call(subscribeWaypointV2Event_);
 
     /*! init mission */        
-    result = initWaypointV2Setting(nh);
+    result = initWaypointV2Setting(nh, 0);
     if(!result)
     {
         return false;
@@ -497,6 +550,7 @@ bool runWaypointV2Mission(ros::NodeHandle &nh)
 
     return true;
 }
+
 
 bool joystickActivityCallback(const sensor_msgs::Joy::ConstPtr& msg)
 {
@@ -685,6 +739,10 @@ void shutDownCallback(XmlRpc::XmlRpcValue& params, XmlRpc::XmlRpcValue& result)
     result = ros::xmlrpc::responseInt(1, "", 0);
 }
 
+void ImuCallback(const sensor_msgs::Imu::ConstPtr& msg)
+{
+    imu_quat = msg->orientation;
+}
 /********************** End of Added functions *********************/
 
 int main(int argc, char** argv)
@@ -704,8 +762,10 @@ int main(int argc, char** argv)
     ros::Subscriber height_subscriber         = nh.subscribe<std_msgs::Float32>("dji_osdk_ros/height_above_takeoff", 1, &HeightCallback);
     ros::Subscriber flight_status_subscriber  = nh.subscribe<std_msgs::UInt8>("dji_osdk_ros/flight_status", 1, &FlightStatusCallback);
     ros::Subscriber joySubscriber             = nh.subscribe<sensor_msgs::Joy>("dji_osdk_ros/rc", 1, &joystickActivityCallback);
+    ros::Subscriber imu_subscriber  = nh.subscribe<sensor_msgs::Imu>("dji_osdk_ros/imu", 1, &ImuCallback);
     waypointV2_stop_mission_client = nh.serviceClient<dji_osdk_ros::StopWaypointV2Mission>("dji_osdk_ros/waypointV2_stopMission");
     obtain_release_control_client = nh.serviceClient<dji_osdk_ros::ObtainControlAuthority>("/obtain_release_control_authority");
+    auto emergency_brake_client       = nh.serviceClient<dji_osdk_ros::EmergencyBrake>("emergency_brake");
 
     if(argc < 2)
     {
@@ -724,6 +784,7 @@ int main(int argc, char** argv)
     ROS_INFO("Executing approximation sequence.");
     int result = runWaypointV2Mission(nh);
     ROS_INFO("Waypoint Mission run %s",(result == 0 ? "failure" : "success"));
+    //metres_to_lon_lat_offset(-8.89, 52.71, 10, 10);
     //ros::Duration(10).sleep();
     //ROS_INFO("First approximation completed.");
 
