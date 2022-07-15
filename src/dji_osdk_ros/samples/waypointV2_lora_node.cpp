@@ -80,6 +80,9 @@ bool received_offsets = false;
 
 bool offset_completed = false;
 bool firstGPS = true;
+
+int action_id = 0;
+
 std::mutex mOff;
 std::mutex mCorr;
 std::mutex mGPS;
@@ -240,7 +243,7 @@ std::vector<dji_osdk_ros::WaypointV2> generateOffsetWaypoints(ros::NodeHandle &n
             break;
     } // wait up to 5 sec for offset data
 
-    // Vector to store waypoints in.
+    // Vector to store waypoints in
     std::vector<dji_osdk_ros::WaypointV2> waypointList;
 
     if(received_offsets)
@@ -306,18 +309,16 @@ bool initWaypointV2Setting(ros::NodeHandle &nh, int mode)
     if(mode == 0)
     {
         initWaypointV2Setting_.request.waypointV2InitSettings.mission = generatePolygonWaypoints(nh, initWaypointV2Setting_.request.radius, initWaypointV2Setting_.request.polygonNum);
+        /*! Generate actions. Changed */
+        generateWaypointV2Actions(nh, initWaypointV2Setting_.request.waypointV2InitSettings.missTotalLen);
     }
     else if(mode == 1)
     {
         initWaypointV2Setting_.request.waypointV2InitSettings.mission = generateOffsetWaypoints(nh);
+        /*! Generate actions. Changed */
+        generateWaypointV2Actions(nh, initWaypointV2Setting_.request.waypointV2InitSettings.missTotalLen);
     }
     initWaypointV2Setting_.request.waypointV2InitSettings.missTotalLen = initWaypointV2Setting_.request.waypointV2InitSettings.mission.size();
-
-    /*! Generate actions. Changed */
-    generateWaypointV2Actions(nh, initWaypointV2Setting_.request.waypointV2InitSettings.missTotalLen);
-    for (int i = 0; i < initWaypointV2Setting_.request.waypointV2InitSettings.mission.size(); i++){
-      ROS_INFO("x: %f, y: %f, z: %f", initWaypointV2Setting_.request.waypointV2InitSettings.mission[i].positionX, initWaypointV2Setting_.request.waypointV2InitSettings.mission[i].positionY, initWaypointV2Setting_.request.waypointV2InitSettings.mission[i].positionZ);
-    }
      
     waypointV2_init_setting_client.call(initWaypointV2Setting_);
     if (initWaypointV2Setting_.response.result)
@@ -460,7 +461,7 @@ bool generateWaypointV2Actions(ros::NodeHandle &nh, uint16_t actionNum)
     dji_osdk_ros::WaypointV2Action actionVector;
     for (uint16_t i = 0; i < actionNum; i++)
     {
-      actionVector.actionId  = i;
+      actionVector.actionId  = action_id++;
       actionVector.waypointV2ActionTriggerType  = dji_osdk_ros::WaypointV2Action::DJIWaypointV2ActionTriggerTypeSampleReachPoint;
       actionVector.waypointV2SampleReachPointTrigger.waypointIndex = i;
       actionVector.waypointV2SampleReachPointTrigger.terminateNum = 0;
