@@ -50,6 +50,8 @@
 
 #include <math.h>
 #include <chrono>
+#include <time.h>
+#include <boost/bind.hpp>
 
 using namespace DJI::OSDK;
 using namespace dji_osdk_ros;
@@ -71,10 +73,9 @@ float z_offset = 0.0f;
 float yaw_offset = 0.0f;
 float pos_thr = 0.5f;
 float yaw_thr = 1.0f;
-geometry_msgs::Point32 offsets;
 
-float lat_offset = 0.0f;
-float lon_offset = 0.0f;
+float rel_alt = 0.0f;
+geometry_msgs::Point32 offsets;
 
 bool received_offsets = false;
 
@@ -82,6 +83,8 @@ bool offset_completed = false;
 bool firstGPS = true;
 
 int action_id = 0;
+
+enum Mode {mode_waypoints, mode_offsets};
 
 std::mutex mOff;
 std::mutex mCorr;
@@ -154,7 +157,7 @@ void waypointV2MissionStateSubCallback(const dji_osdk_ros::WaypointV2MissionStat
   //ROS_INFO("waypointV2MissionStateSubCallback");
   //ROS_INFO("missionStatePushAck->commonDataVersion:%d\n",waypoint_V2_mission_state_push_.commonDataVersion);
   //ROS_INFO("missionStatePushAck->commonDataLen:%d\n",waypoint_V2_mission_state_push_.commonDataLen);
-  //ROS_INFO("missionStatePushAck->data.state:0x%x\n",waypoint_V2_mission_state_push_.state);
+  ROS_INFO("missionStatePushAck->data.state:0x%x\n",waypoint_V2_mission_state_push_.state);
   //ROS_INFO("missionStatePushAck->data.curWaypointIndex:%d\n",waypoint_V2_mission_state_push_.curWaypointIndex);
   //ROS_INFO("missionStatePushAck->data.velocity:%d\n",waypoint_V2_mission_state_push_.velocity);
 
@@ -253,14 +256,34 @@ std::vector<dji_osdk_ros::WaypointV2> generateOffsetWaypoints(ros::NodeHandle &n
 	    dji_osdk_ros::WaypointV2 midpoint;
 	    setWaypointV2Defaults(midpoint);
 	    //get current drone position
-	    float curr_latitude = gps_corr.latitude;
-	    float curr_longitude = gps_corr.longitude;
-	    float curr_altitude = gps_corr.altitude;
+            
+	    //float curr_latitude = gps_corr.latitude;
+	    //float curr_longitude = gps_corr.longitude;
+	    //float curr_altitude = gps_corr.altitude;
+
+            float curr_latitude = gps_position_.latitude;
+	    float curr_longitude = gps_position_.longitude;
+	    //float curr_altitude = gps_position_.altitude;
+            float curr_altitude = rel_alt; //corrected gps height
+            
+            float lat_offset = lat_lon_offsets.latitude;
+            float lon_offset = lat_lon_offsets.longitude;
 
 	    endpoint.latitude  = (curr_latitude + lat_offset) * C_PI / 180.0;
 	    endpoint.longitude  = (curr_longitude + lon_offset) * C_PI / 180.0;
-	    endpoint.relativeHeight  = curr_altitude;
+	    endpoint.relativeHeight  = rel_alt;
 	    endpoint.dampingDistance = 0;
+
+            std::cout << "lat offset:" << lat_offset << std::endl;
+            std::cout << "lon offset:" << lon_offset << std::endl;
+
+            std::cout << "current lat:" << curr_latitude << std::endl;
+            std::cout << "current lon:" << curr_longitude << std::endl;
+            std::cout << "current alt:" << curr_altitude << std::endl;
+
+            std::cout << "goal lat:" << curr_latitude + lat_offset << std::endl;
+            std::cout << "goal lon:" << curr_longitude + lon_offset << std::endl;
+            std::cout << "goal alt:" << endpoint.relativeHeight << std::endl;
 	    
 	    // simple subdivision of trajectory. Does not necessarily yield straight line
 	    midpoint.latitude  = (curr_latitude + (lat_offset / 2)) * C_PI / 180.0;
@@ -287,7 +310,7 @@ std::vector<float> metres_to_lon_lat_offset(float orig_lon, float orig_lat, floa
     return dlon_dlat;
 }
 //mode 0, read from yaml file. Mode 1, offset navigation
-bool initWaypointV2Setting(ros::NodeHandle &nh, int mode) 
+bool initWaypointV2Setting(ros::NodeHandle &nh, Mode mode) 
 {
     waypointV2_init_setting_client = nh.serviceClient<dji_osdk_ros::InitWaypointV2Setting>("dji_osdk_ros/waypointV2_initSetting");
     //These two parameters will be ignored when passed to the function, they were kept just to preserve the function prototype
@@ -306,19 +329,20 @@ bool initWaypointV2Setting(ros::NodeHandle &nh, int mode)
     initWaypointV2Setting_.request.waypointV2InitSettings.gotoFirstWaypointMode = initWaypointV2Setting_.request.waypointV2InitSettings.DJIWaypointV2MissionGotoFirstWaypointModePointToPoint;
     // The function generatePolygon has been changed to populate the waypoint list 
     // with the content of the mission fila and match the waypoint V2 definitions
-    if(mode == 0)
+    if(mode == mode_waypoints)
     {
         initWaypointV2Setting_.request.waypointV2InitSettings.mission = generatePolygonWaypoints(nh, initWaypointV2Setting_.request.radius, initWaypointV2Setting_.request.polygonNum);
+        initWaypointV2Setting_.request.waypointV2InitSettings.missTotalLen = initWaypointV2Setting_.request.waypointV2InitSettings.mission.size();
         /*! Generate actions. Changed */
         generateWaypointV2Actions(nh, initWaypointV2Setting_.request.waypointV2InitSettings.missTotalLen);
     }
-    else if(mode == 1)
+    else if(mode == mode_offsets)
     {
         initWaypointV2Setting_.request.waypointV2InitSettings.mission = generateOffsetWaypoints(nh);
+	initWaypointV2Setting_.request.waypointV2InitSettings.missTotalLen = initWaypointV2Setting_.request.waypointV2InitSettings.mission.size();
         /*! Generate actions. Changed */
         generateWaypointV2Actions(nh, initWaypointV2Setting_.request.waypointV2InitSettings.missTotalLen);
     }
-    initWaypointV2Setting_.request.waypointV2InitSettings.missTotalLen = initWaypointV2Setting_.request.waypointV2InitSettings.mission.size();
      
     waypointV2_init_setting_client.call(initWaypointV2Setting_);
     if (initWaypointV2Setting_.response.result)
@@ -458,10 +482,12 @@ bool resumeWaypointV2Mission(ros::NodeHandle &nh)
 bool generateWaypointV2Actions(ros::NodeHandle &nh, uint16_t actionNum)
 {
     waypointV2_generate_actions_client = nh.serviceClient<dji_osdk_ros::GenerateWaypointV2Action>("dji_osdk_ros/waypointV2_generateActions");
+    std::cout << "action num: " << actionNum << std::endl;
     dji_osdk_ros::WaypointV2Action actionVector;
     for (uint16_t i = 0; i < actionNum; i++)
     {
       actionVector.actionId  = action_id++;
+      std::cout << "action ID: " << action_id << std::endl;
       actionVector.waypointV2ActionTriggerType  = dji_osdk_ros::WaypointV2Action::DJIWaypointV2ActionTriggerTypeSampleReachPoint;
       actionVector.waypointV2SampleReachPointTrigger.waypointIndex = i;
       actionVector.waypointV2SampleReachPointTrigger.terminateNum = 0;
@@ -504,14 +530,27 @@ float32_t getGlobalCruiseSpeed(ros::NodeHandle &nh)
     return getGlobalCruisespeed_.response.global_cruisespeed;
 }
 
-bool runWaypointV2Mission(ros::NodeHandle &nh, int mode)
+bool runWaypointV2Mission(ros::NodeHandle &nh, Mode mode)
 {
+    std::cout << "mission_state: " << int(mission_state) << std::endl;
+    sleep(1);
+    //while(!(mission_state == 0x0) && !userInterrupt) //wait for mission paused or exited state before trying to run new mission
+    //{
+      //if(mission_state == 0x0)
+      //{
+      //  stopWaypointV2Mission();
+      //}
+      //ROS_INFO_THROTTLE(5,"waiting for mission to end");
+    //}
+    srand(time(NULL));
+    action_id = rand();
+
     int timeout = 1;
     bool result = false;
 
     get_drone_type_client = nh.serviceClient<dji_osdk_ros::GetDroneType>("get_drone_type");
-    waypointV2_mission_state_push_client = nh.serviceClient<dji_osdk_ros::SubscribeWaypointV2Event>("dji_osdk_ros/waypointV2_subscribeMissionState");
-    waypointV2_mission_event_push_client = nh.serviceClient<dji_osdk_ros::SubscribeWaypointV2State>("dji_osdk_ros/waypointV2_subscribeMissionEvent");
+    waypointV2_mission_state_push_client = nh.serviceClient<dji_osdk_ros::SubscribeWaypointV2State>("dji_osdk_ros/waypointV2_subscribeMissionState");
+    waypointV2_mission_event_push_client = nh.serviceClient<dji_osdk_ros::SubscribeWaypointV2Event>("dji_osdk_ros/waypointV2_subscribeMissionEvent");
 
     waypointV2EventSub = nh.subscribe("dji_osdk_ros/waypointV2_mission_event", 10, &waypointV2MissionEventSubCallback);
     waypointV2StateSub = nh.subscribe("dji_osdk_ros/waypointV2_mission_state", 10, &waypointV2MissionStateSubCallback);
@@ -530,7 +569,7 @@ bool runWaypointV2Mission(ros::NodeHandle &nh, int mode)
     waypointV2_mission_event_push_client.call(subscribeWaypointV2Event_);
 
     /*! init mission */        
-    result = initWaypointV2Setting(nh, 0);
+    result = initWaypointV2Setting(nh, mode);
     if(!result)
     {
         return false;
@@ -546,11 +585,11 @@ bool runWaypointV2Mission(ros::NodeHandle &nh, int mode)
     //sleep(timeout);
 
     /*! upload  actions */
-    result = uploadWaypointV2Action(nh);
-    if(!result)
-    {
-        return false;
-    }
+    //result = uploadWaypointV2Action(nh);
+    //if(!result)
+    //{
+    //    return false;
+    //}
     //sleep(timeout);
 
     /*! set global cruise speed */
@@ -568,7 +607,6 @@ bool runWaypointV2Mission(ros::NodeHandle &nh, int mode)
     {
         return false;
     }
-    //while(((mission_state != 0x0) || (mission_state != 0x3))  && !userInterrupt); //wait for mission paused or exited state, and
     //sleep(100);
 
     return true;
@@ -635,11 +673,21 @@ void posOffsetsCallback(const geometry_msgs::Point32::ConstPtr& msg)
     mOff.unlock();
 }
 
-void latLonOffsetsCallback(const sensor_msgs::NavSatFix ::ConstPtr& msg)
+void latLonOffsetsCallback(ros::NodeHandle &node_handle, const sensor_msgs::NavSatFix ::ConstPtr& msg)
 {
     received_offsets = true;
     std::cout << "lat lon offsets received!" << std::endl; 
     lat_lon_offsets = *msg;
+    if(mission_state == 0x0 & !userInterrupt)
+    {
+      ROS_INFO("Executing approximation sequence.");
+      // run mission in mode 1: offset mission
+      Mode mode = mode_waypoints;
+      int result = 0;
+      result = runWaypointV2Mission(node_handle, mode_offsets); 
+      ROS_INFO("Waypoint Offset Mission 1 run %s",(result == 0 ? "failure" : "success"));
+      std::cout << "mission state after upload:" << int(mission_state) << std::endl;
+    }
 }
 
 // Function used to move to a position specified as an offset from the current drone's position
@@ -702,6 +750,7 @@ void ModeCallback(const std_msgs::UInt8::ConstPtr& msg)
 void HeightCallback(const std_msgs::Float32::ConstPtr& msg)
 {
     auto height = msg->data;
+    rel_alt = height;
     mGPS.lock();
     float gpsAltitude = altitude;
     mGPS.unlock();
@@ -791,7 +840,7 @@ int main(int argc, char** argv)
     ros::XMLRPCManager::instance()->bind("shutdown", shutDownCallback);
     ros::NodeHandle nh;
     ros::Subscriber gpsPositionSub            = nh.subscribe<sensor_msgs::NavSatFix>("dji_osdk_ros/gps_position", 10, &gpsPositionSubCallback);
-    ros::Subscriber lonlatOffsetsSub          = nh.subscribe<sensor_msgs::NavSatFix>("/lon_lat_offsets", 1, &latLonOffsetsCallback);
+    ros::Subscriber lonlatOffsetsSub          = nh.subscribe<sensor_msgs::NavSatFix>("/lon_lat_offsets", 1, boost::bind(&latLonOffsetsCallback, boost::ref(nh), _1));
     flight_control_client                     = nh.serviceClient<dji_osdk_ros::FlightTaskControl>("flight_task_control");
     ros::Subscriber pos_offsets_subscriber    = nh.subscribe<geometry_msgs::Point32>("position_offsets",10, &posOffsetsCallback);
     ros::Subscriber flight_mode_subscriber    = nh.subscribe<std_msgs::UInt8>("dji_osdk_ros/display_mode", 1, &ModeCallback);
@@ -819,8 +868,20 @@ int main(int argc, char** argv)
     // Waypoint mission
     ROS_INFO("Executing approximation sequence.");
     // run mission in mode 1: offset mission
-    int result = runWaypointV2Mission(nh, 1);
-    ROS_INFO("Waypoint Mission run %s",(result == 0 ? "failure" : "success"));
+    Mode mode = mode_waypoints;
+    int result = 0;
+    result = runWaypointV2Mission(nh, mode_offsets); 
+    ROS_INFO("Waypoint Offset Mission 1 run %s",(result == 0 ? "failure" : "success"));
+    std::cout << "mission state after upload:" << int(mission_state) << std::endl;
+
+    
+
+   
+    //sleep(100);
+    
+
+    /*result = runWaypointV2Mission(nh, mode_waypoints);
+    ROS_INFO("Waypoint Mission run %s",(result == 0 ? "failure" : "success"));*/
     //metres_to_lon_lat_offset(-8.89, 52.71, 10, 10);
     //ros::Duration(10).sleep();
     //ROS_INFO("First approximation completed.");
