@@ -256,14 +256,9 @@ std::vector<dji_osdk_ros::WaypointV2> generateOffsetWaypoints(ros::NodeHandle &n
 	    dji_osdk_ros::WaypointV2 midpoint;
 	    setWaypointV2Defaults(midpoint);
 	    //get current drone position
-            
-	    //float curr_latitude = gps_corr.latitude;
-	    //float curr_longitude = gps_corr.longitude;
-	    //float curr_altitude = gps_corr.altitude;
 
             float curr_latitude = gps_position_.latitude;
 	    float curr_longitude = gps_position_.longitude;
-	    //float curr_altitude = gps_position_.altitude;
             float curr_altitude = rel_alt; //corrected gps height
             
             float lat_offset = lat_lon_offsets.latitude;
@@ -271,7 +266,7 @@ std::vector<dji_osdk_ros::WaypointV2> generateOffsetWaypoints(ros::NodeHandle &n
 
 	    endpoint.latitude  = (curr_latitude + lat_offset) * C_PI / 180.0;
 	    endpoint.longitude  = (curr_longitude + lon_offset) * C_PI / 180.0;
-	    endpoint.relativeHeight  = rel_alt;
+	    endpoint.relativeHeight  = rel_alt + lat_lon_offsets.altitude;
 	    endpoint.dampingDistance = 0;
 
             std::cout << "lat offset:" << lat_offset << std::endl;
@@ -678,6 +673,7 @@ void latLonOffsetsCallback(ros::NodeHandle &node_handle, const sensor_msgs::NavS
     received_offsets = true;
     std::cout << "lat lon offsets received!" << std::endl; 
     lat_lon_offsets = *msg;
+    // generate waypoint mission each time this message is received, provided previous mission has finished
     if(mission_state == 0x0 & !userInterrupt)
     {
       ROS_INFO("Executing approximation sequence.");
