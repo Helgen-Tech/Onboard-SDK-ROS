@@ -23,6 +23,14 @@ FOREACH(EXAMPLE ${EXAMPLES})
   target_link_libraries(waypointV2_lora_node ${PROJECT_NAME})
   add_dependencies(waypointV2_lora_node dji_osdk_ros_generate_messages_cpp)
 
+  add_executable(test_waypointV2_offset_mission samples/test_waypointV2_offset_mission.cpp)
+  target_link_libraries(test_waypointV2_offset_mission ${PROJECT_NAME})
+  add_dependencies(test_waypointV2_offset_mission dji_osdk_ros_generate_messages_cpp)
+
+  add_executable(test_waypointV2_waypoint_mission samples/test_waypointV2_waypoint_mission.cpp)
+  target_link_libraries(test_waypointV2_waypoint_mission ${PROJECT_NAME})
+  add_dependencies(test_waypointV2_waypoint_mission dji_osdk_ros_generate_messages_cpp)
+
   #add_executable(waypointV2_test samples/waypointV2_test.cpp)
   #target_link_libraries(waypointV2_test ${PROJECT_NAME})
   #add_dependencies(waypointV2_test dji_osdk_ros_generate_messages_cpp)

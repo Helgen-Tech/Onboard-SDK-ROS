@@ -60,7 +60,7 @@ using namespace dji_osdk_ros;
 
 std::string mission_file_path;
 uint8_t mission_state = 0x00;
-bool userInterrupt = false; //user input on joystick detected
+volatile bool userInterrupt = false; //user input on joystick detected
 //mission state of 
 bool uploadedMission = false;
 bool activatedLanding = false;
@@ -74,6 +74,11 @@ float yaw_offset = 0.0f;
 float pos_thr = 0.5f;
 float yaw_thr = 1.0f;
 
+float goal_latitude = 0.0f;
+float goal_longitude = 0.0f;
+
+uint8_t status; //the status of the flight. 0 motors stopped, 1 on ground, 2 flying
+
 float rel_alt = 0.0f;
 geometry_msgs::Point32 offsets;
 
@@ -84,14 +89,14 @@ bool firstGPS = true;
 
 int action_id = 0;
 
-enum Mode {mode_waypoints, mode_offsets};
+enum Mode {mode_waypoints, mode_offsets}; // determine whether to run a waypoint mission from a file, or an offset mission by sub to topic
 
 std::mutex mOff;
 std::mutex mCorr;
 std::mutex mGPS;
 std::mutex mState;
 
-sensor_msgs::NavSatFix gps_corr;
+sensor_msgs::NavSatFix current_gps_pos;
 sensor_msgs::NavSatFix lat_lon_offsets; // relative beacon offset from drone
 geometry_msgs::Quaternion imu_quat;
 
@@ -106,7 +111,7 @@ bool moveByPosOffset(const JoystickCommand &offsetDesired,
 void gpsPositionSubCallback(const sensor_msgs::NavSatFix::ConstPtr& gpsPosition)
 {
     gps_position_ = *gpsPosition;
-
+    current_gps_pos = gps_position_;
     // Adapted based on our missions node
     mGPS.lock();
     altitude = gps_position_.altitude;
@@ -118,6 +123,31 @@ void gpsPositionSubCallback(const sensor_msgs::NavSatFix::ConstPtr& gpsPosition)
         mCorr.unlock();
         firstGPS = !firstGPS;
     }
+    //float land_offset_lat = 0.00001f; //land 0.00001 deg north of beacon
+    //float land_offset_lon = 0.00000f; //land 0.0000 deg east of beacon
+    //float land_offset_thr = 0.00000001f; //max displacement from final position as decimal fraction
+    //if(land_offset_thr > abs(gps_position_.latitude + land_offset_lat - goal_latitude))
+
+    /*float land_offset_thr = 0.0005f; //land when closer than this distance (deg) (approx 5m)
+    ROS_INFO("goal latitude: %f curr latitude: %f", goal_latitude, gps_position_.latitude);
+    if(land_offset_thr > abs(gps_position_.latitude - goal_latitude) &&
+       land_offset_thr > abs(gps_position_.longitude - goal_longitude) &&
+       status == DJI::OSDK::VehicleStatus::FlightStatus::IN_AIR)
+    {
+        // Land the drone
+        dji_osdk_ros::FlightTaskControl task;
+	task.request.task = FlightTaskControl::Request::TASK_FORCE_LANDING;
+	task.request.joystickCommand.x = 0;
+	task.request.joystickCommand.y = 0;
+	task.request.joystickCommand.z = 0;
+	task.request.joystickCommand.yaw = 0;
+	task.request.velocityControlTimeMs = 0;
+	task.request.posThresholdInM   = 0;
+	task.request.yawThresholdInDeg = 0;
+
+	flight_control_client.call(task);
+      
+    }*/
 }
 
 void waypointV2MissionEventSubCallback(const dji_osdk_ros::WaypointV2MissionEventPush::ConstPtr& waypointV2MissionEventPush)
@@ -174,7 +204,7 @@ void setWaypointV2Defaults(dji_osdk_ros::WaypointV2& waypointV2)
   waypointV2.config.useLocalCruiseVel = 0;
   waypointV2.config.useLocalMaxVel = 0;
 
-  waypointV2.dampingDistance = 1;
+  waypointV2.dampingDistance = 0;
   waypointV2.heading = 0;
   waypointV2.turnMode = dji_osdk_ros::DJIWaypointV2TurnModeClockwise;
 
@@ -289,6 +319,7 @@ std::vector<dji_osdk_ros::WaypointV2> generateOffsetWaypoints(ros::NodeHandle &n
 	    waypointList.push_back(midpoint);
 	    waypointList.push_back(endpoint);
     }
+    
     return waypointList;
 }
 
@@ -670,12 +701,42 @@ void posOffsetsCallback(const geometry_msgs::Point32::ConstPtr& msg)
 
 void latLonOffsetsCallback(ros::NodeHandle &node_handle, const sensor_msgs::NavSatFix ::ConstPtr& msg)
 {
+    
     received_offsets = true;
     std::cout << "lat lon offsets received!" << std::endl; 
     lat_lon_offsets = *msg;
     // generate waypoint mission each time this message is received, provided previous mission has finished
     if(mission_state == 0x0 & !userInterrupt)
     {
+      goal_latitude = current_gps_pos.latitude + lat_lon_offsets.latitude;
+      goal_longitude = current_gps_pos.longitude + lat_lon_offsets.longitude;
+
+      //float land_offset_lat = 0.00001f; //land 0.00001 deg north of beacon
+      //float land_offset_lon = 0.00000f; //land 0.0000 deg east of beacon
+      //float land_offset_thr = 0.00005f; //max displacement from final position as decimal fraction
+      //if(land_offset_thr > abs(gps_position_.latitude + land_offset_lat - goal_latitude))
+
+      float land_offset_thr = 0.00001f; //land when closer than this distance (deg) (approx 5m)
+      ROS_INFO("goal latitude: %f curr latitude: %f", goal_latitude, gps_position_.latitude);
+      ROS_INFO("latitude offset: %f longitude offset: %f", lat_lon_offsets.latitude, lat_lon_offsets.longitude);
+      if((abs(lat_lon_offsets.latitude) < land_offset_thr) && (abs(lat_lon_offsets.longitude) < land_offset_thr) &&
+         status == DJI::OSDK::VehicleStatus::FlightStatus::IN_AIR)
+      {
+        // Land the drone
+        dji_osdk_ros::FlightTaskControl task;
+	task.request.task = FlightTaskControl::Request::TASK_FORCE_LANDING;
+	task.request.joystickCommand.x = 0;
+	task.request.joystickCommand.y = 0;
+	task.request.joystickCommand.z = 0;
+	task.request.joystickCommand.yaw = 0;
+	task.request.velocityControlTimeMs = 0;
+	task.request.posThresholdInM   = 0;
+	task.request.yawThresholdInDeg = 0;
+
+	flight_control_client.call(task);
+      
+      }
+      else{
       ROS_INFO("Executing approximation sequence.");
       // run mission in mode 1: offset mission
       Mode mode = mode_waypoints;
@@ -683,7 +744,9 @@ void latLonOffsetsCallback(ros::NodeHandle &node_handle, const sensor_msgs::NavS
       result = runWaypointV2Mission(node_handle, mode_offsets); 
       ROS_INFO("Waypoint Offset Mission 1 run %s",(result == 0 ? "failure" : "success"));
       std::cout << "mission state after upload:" << int(mission_state) << std::endl;
+      }
     }
+    
 }
 
 // Function used to move to a position specified as an offset from the current drone's position
@@ -782,16 +845,9 @@ void HeightCallback(const std_msgs::Float32::ConstPtr& msg)
     } 
 }
 
-//subscribe to corrected GPS topic
-void CorrGpsPositionSubCallback(const sensor_msgs::NavSatFix::ConstPtr& gpsPosition)
-{
-    gps_corr = *gpsPosition; //copy to global GPS position variable
-}
-
-
 void FlightStatusCallback(const std_msgs::UInt8::ConstPtr& msg)
 {
-  auto status = msg->data;
+  status = msg->data;
   if(activatedLanding && status == DJI::OSDK::VehicleStatus::FlightStatus::ON_GROUND)
   {
     ros::NodeHandle n;
@@ -866,7 +922,7 @@ int main(int argc, char** argv)
     // run mission in mode 1: offset mission
     Mode mode = mode_waypoints;
     int result = 0;
-    result = runWaypointV2Mission(nh, mode_offsets); 
+    result = runWaypointV2Mission(nh, mode_waypoints); 
     ROS_INFO("Waypoint Offset Mission 1 run %s",(result == 0 ? "failure" : "success"));
     std::cout << "mission state after upload:" << int(mission_state) << std::endl;
 
