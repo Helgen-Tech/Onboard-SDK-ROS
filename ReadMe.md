@@ -1,3 +1,8 @@
+# Elzee Demo
+## Mission Node Version
+
+The current version of the mission node, used to run the final demo, is full_demo_one_shot.cpp. The file full_demo.cpp is a version of the code which is in development, which seeks to minimise the issues caused by the long delay in offset messages introduced by buffering the RSSI and GPS messages in the trilateration node.
+
 # DJI Onboard SDK ROS 4.1.0
 
 ## Latest Update
