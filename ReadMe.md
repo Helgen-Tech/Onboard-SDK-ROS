@@ -2,6 +2,36 @@
 ## Mission Node Version
 
 The current version of the mission node, used to run the final demo, is full_demo_one_shot.cpp. The file full_demo.cpp is a version of the code which is in development, which seeks to minimise the issues caused by the long delay in offset messages introduced by buffering the RSSI and GPS messages in the trilateration node.
+## To Run the Demo (as of Oct. 2022)
+Bash aliases are used to run the nodes. These aliases are defined in this readme. TODO: ADD ALIASES
+Check which tty device the drone has connected to. We have been doing this by simply cat-ing the tty that is currently set in the config and launch files. A large amount of random unicode characters will print from the device that is connected to the drone. We had considered writing a script to modify the config files with the correct tty name by checking the associated device ID, but this was never implemented.
+```
+cat /dev/ttyACM0
+```
+Start the OSDK in 'real' mode
+```
+M300-real
+```
+Run the vehicle node
+```
+vehicle-node
+```
+Run the trilateration node. We reverted to an old, known working, version of the code due to a suspected bug in the new trilateration code.
+```
+rosrun lora_arduino llh_offsets_pub_old.py
+```
+Run the autonomous landing node. This is just used to calculate the offset from the mat due to incompatibility in its control code (It was designed for the M210 RTK and we are running it on the M300 RTK)
+```
+autonomous-landing
+```
+Run the mission node. This executes the waypoint mission in the yaml file, generates the offset moves to roughly centre the drone over the mat, and controls the drone's descent while centring based on the autonomous landing node's offsets, and controls the transition between these modes based on the drone's state. Full-demo-one-shot is the version of the code which cannot recover from a failed offset move as described above. Translate-north points to the full-demo-translate-north mission yaml file.
+```
+full-demo-one-shot-translate-north
+```
+The mission can be interrupted by the pilot moving the joysticks on the controller. Additionally you can run the get-control alias to help ensure the precision landing terminates properly
+```
+get-control # to abort the mission
+```
 
 # DJI Onboard SDK ROS 4.1.0
 
