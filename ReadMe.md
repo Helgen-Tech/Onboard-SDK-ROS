@@ -37,15 +37,14 @@ Power up the drone and controller as normal. The simulation runs the same as the
 ```
 M300-sim-on
 ```
-The trilateration code will only run if there is both a GPS fix and RSSI messages are being received, so typically you cannot run this in the lab, nor is it particularly useful for testing. You can instead use rostopic pub to publish a message. Hit tab after typing the topic name and it will autofill the message type and contents if the mission node is running and waiting for a subscriber on that topic
+The trilateration code will only run if there is both a GPS fix and RSSI messages are being received, so typically you cannot run this in the lab, nor is it particularly useful for testing. You can instead use rostopic pub to publish a predefined message. Hit tab after typing the topic name and it will autofill the message type and contents if the mission node is running and waiting for a subscriber on that topic. the -r argument determines the message rate in Hz. For testing, you can publish decreasing offsets until you publish an offset which is within the landing threshold, i.e. the requested offset is small enough that it implies you are roughly centred over the mat.
 ```
 rostopic pub -r 1 /lon_lat_offsets ...
 ```
-The sim can be turned off with 
+The sim can be turned off with the following, however I have not found any use for this.
 ```
 M300-sim-off
 ```
-however I have not found any use for this
 
 
 # DJI Onboard SDK ROS 4.1.0
