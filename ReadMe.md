@@ -32,6 +32,21 @@ The mission can be interrupted by the pilot moving the joysticks on the controll
 ```
 get-control # to abort the mission
 ```
+## To Run the Simulation (as of Oct. 2022)
+Power up the drone and controller as normal. The simulation runs the same as the demo except you substitute M300-real with M300-sim-on. This simulates the drone starting the coordinates specified in the M300-sim-on alias, so this must be modified in the .bashrc file
+```
+M300-sim-on
+```
+The trilateration code will only run if there is both a GPS fix and RSSI messages are being received, so typically you cannot run this in the lab, nor is it particularly useful for testing. You can instead use rostopic pub to publish a message. Hit tab after typing the topic name and it will autofill the message type and contents if the mission node is running and waiting for a subscriber on that topic
+```
+rostopic pub -r 1 /lon_lat_offsets ...
+```
+The sim can be turned off with 
+```
+M300-sim-off
+```
+however I have not found any use for this
+
 
 # DJI Onboard SDK ROS 4.1.0
 
