@@ -24,28 +24,27 @@ Run the autonomous landing node. This is just used to calculate the offset from 
 ```
 autonomous-landing
 ```
-Run the mission node. This executes the waypoint mission in the yaml file, generates the offset moves to roughly centre the drone over the mat, and controls the drone's descent while centring based on the autonomous landing node's offsets, and controls the transition between these modes based on the drone's state. Full-demo-one-shot is the version of the code which cannot recover from a failed offset move as described above. Translate-north points to the full-demo-translate-north mission yaml file.
+Run the mission node. This executes the waypoint mission in the yaml file, subscribes to the trilateration node's offset topic to generate the offset moves to roughly centre the drone over the mat, and controls the drone's descent while centring based on the autonomous landing node's offsets, and controls the transition between these modes based on the drone's state. Full-demo-one-shot is the version of the code which cannot recover from a failed offset move as described above. Translate-north points to the full-demo-translate-north mission yaml file.
 ```
 full-demo-one-shot-translate-north
 ```
-The mission can be interrupted by the pilot moving the joysticks on the controller. Additionally you can run the get-control alias to help ensure the precision landing terminates properly
+The mission can be interrupted by the pilot moving the joysticks on the controller. Additionally you can run the get-control alias to help ensure the precision landing terminates properly. 
 ```
-get-control # to abort the mission
+get-control # request control of the drone manually
 ```
 ## To Run the Simulation (as of Oct. 2022)
 Power up the drone and controller as normal. The simulation runs the same as the demo except you substitute M300-real with M300-sim-on. This simulates the drone starting the coordinates specified in the M300-sim-on alias, so this must be modified in the .bashrc file
 ```
 M300-sim-on
 ```
-The trilateration code will only run if there is both a GPS fix and RSSI messages are being received, so typically you cannot run this in the lab, nor is it particularly useful for testing. You can instead use rostopic pub to publish a predefined message. Hit tab after typing the topic name and it will autofill the message type and contents if the mission node is running and waiting for a subscriber on that topic. the -r argument determines the message rate in Hz. For testing, you can publish decreasing offsets until you publish an offset which is within the landing threshold, i.e. the requested offset is small enough that it implies you are roughly centred over the mat.
+The trilateration code will only run if there is both a GPS fix and RSSI messages are being received, so typically you cannot run this in the lab, nor is it particularly useful for testing. You can instead use rostopic pub to publish a predefined message. Hit tab after typing the topic name and it will autofill the message type and contents if the mission node is running and waiting for a subscriber on that topic. The -r argument determines the message rate in Hz. For testing, you can publish decreasing offsets until you publish an offset which is within the landing threshold, i.e. the requested offset is small enough that it implies you are roughly centred over the mat.
 ```
 rostopic pub -r 1 /lon_lat_offsets ...
 ```
-The sim can be turned off with the following, however I have not found any use for this.
+The sim can be turned off with the following, however we have not found any use for this.
 ```
 M300-sim-off
 ```
-
 
 # DJI Onboard SDK ROS 4.1.0
 
