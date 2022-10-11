@@ -3,7 +3,7 @@
 
 The current version of the mission node, used to run the final demo, is full_demo_one_shot.cpp. The file full_demo.cpp is a version of the code which is in development, which seeks to minimise the issues caused by the long delay in offset messages introduced by buffering the RSSI and GPS messages in the trilateration node.
 ## To Run the Demo (as of Oct. 2022)
-Bash aliases are used to run the nodes. These aliases are defined in this readme. TODO: ADD ALIASES
+Bash aliases are used to run the nodes. These aliases are defined in the main repo for project Waterford.
 Check which tty device the drone has connected to. We have been doing this by simply cat-ing the tty that is currently set in the config and launch files. A large amount of random unicode characters will print from the device that is connected to the drone. We had considered writing a script to modify the config files with the correct tty name by checking the associated device ID, but this was never implemented.
 ```
 cat /dev/ttyACM0
