@@ -1,3 +1,51 @@
+# Elzee Demo
+## Mission Node Version
+
+The current version of the mission node, used to run the final demo, is full_demo_one_shot.cpp. The file full_demo.cpp is a version of the code which is in development, which seeks to minimise the issues caused by the long delay in offset messages introduced by buffering the RSSI and GPS messages in the trilateration node.
+## To Run the Demo (as of Oct. 2022)
+Bash aliases are used to run the nodes. These aliases are defined in the main repo for project Waterford.
+Check which tty device the drone has connected to. We have been doing this by simply cat-ing the tty that is currently set in the config and launch files. A large amount of random unicode characters will print from the device that is connected to the drone. We had considered writing a script to modify the config files with the correct tty name by checking the associated device ID, but this was never implemented.
+```
+cat /dev/ttyACM0
+```
+Start the OSDK in 'real' mode
+```
+M300-real
+```
+Run the vehicle node
+```
+vehicle-node
+```
+Run the trilateration node. We reverted to an old, known working, version of the code due to a suspected bug in the new trilateration code.
+```
+rosrun lora_arduino llh_offsets_pub_old.py
+```
+Run the autonomous landing node. This is just used to calculate the offset from the mat due to incompatibility in its control code (It was designed for the M210 RTK and we are running it on the M300 RTK)
+```
+autonomous-landing
+```
+Run the mission node. This executes the waypoint mission in the yaml file, subscribes to the trilateration node's offset topic to generate the offset moves to roughly centre the drone over the mat, and controls the drone's descent while centring based on the autonomous landing node's offsets, and controls the transition between these modes based on the drone's state. Full-demo-one-shot is the version of the code which cannot recover from a failed offset move as described above. Translate-north points to the full-demo-translate-north mission yaml file.
+```
+full-demo-one-shot-translate-north
+```
+The mission can be interrupted by the pilot moving the joysticks on the controller. Additionally you can run the get-control alias to help ensure the precision landing terminates properly. 
+```
+get-control # request control of the drone manually
+```
+## To Run the Simulation (as of Oct. 2022)
+Power up the drone and controller as normal. The simulation runs the same as the demo except you substitute M300-real with M300-sim-on. This simulates the drone starting the coordinates specified in the M300-sim-on alias, so this must be modified in the .bashrc file
+```
+M300-sim-on
+```
+The trilateration code will only run if there is both a GPS fix and RSSI messages are being received, so typically you cannot run this in the lab, nor is it particularly useful for testing. You can instead use rostopic pub to publish a predefined message. Hit tab after typing the topic name and it will autofill the message type and contents if the mission node is running and waiting for a subscriber on that topic. The -r argument determines the message rate in Hz. For testing, you can publish decreasing offsets until you publish an offset which is within the landing threshold, i.e. the requested offset is small enough that it implies you are roughly centred over the mat.
+```
+rostopic pub -r 1 /lon_lat_offsets ...
+```
+The sim can be turned off with the following, however we have not found any use for this.
+```
+M300-sim-off
+```
+
 # DJI Onboard SDK ROS 4.1.0
 
 ## Latest Update

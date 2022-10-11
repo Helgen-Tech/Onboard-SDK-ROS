@@ -19,6 +19,36 @@ FOREACH(EXAMPLE ${EXAMPLES})
   TARGET_LINK_LIBRARIES(${MY_TARGET}
                         ${PROJECT_NAME}
                         )
+  add_executable(waypointV2_lora_node samples/waypointV2_lora_node.cpp)
+  target_link_libraries(waypointV2_lora_node ${PROJECT_NAME})
+  add_dependencies(waypointV2_lora_node dji_osdk_ros_generate_messages_cpp)
+
+  add_executable(test_waypointV2_offset_mission samples/test_waypointV2_offset_mission.cpp)
+  target_link_libraries(test_waypointV2_offset_mission ${PROJECT_NAME})
+  add_dependencies(test_waypointV2_offset_mission dji_osdk_ros_generate_messages_cpp)
+
+  add_executable(test_waypointV2_waypoint_mission samples/test_waypointV2_waypoint_mission.cpp)
+  target_link_libraries(test_waypointV2_waypoint_mission ${PROJECT_NAME})
+  add_dependencies(test_waypointV2_waypoint_mission dji_osdk_ros_generate_messages_cpp)
+
+  add_executable(full_demo samples/full_demo.cpp)
+  target_link_libraries(full_demo ${PROJECT_NAME})
+  add_dependencies(full_demo dji_osdk_ros_generate_messages_cpp)
+
+  add_executable(full_demo_one_shot samples/full_demo_one_shot.cpp)
+  target_link_libraries(full_demo_one_shot ${PROJECT_NAME})
+  add_dependencies(full_demo_one_shot dji_osdk_ros_generate_messages_cpp)
+
+  add_executable(vo_landing samples/vo_landing.cpp)
+  target_link_libraries(vo_landing ${PROJECT_NAME})
+  add_dependencies(vo_landing dji_osdk_ros_generate_messages_cpp)
+
+
+
+  #add_executable(waypointV2_test samples/waypointV2_test.cpp)
+  #target_link_libraries(waypointV2_test ${PROJECT_NAME})
+  #add_dependencies(waypointV2_test dji_osdk_ros_generate_messages_cpp)
+
 
   INSTALL(TARGETS ${MY_TARGET}
           ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
